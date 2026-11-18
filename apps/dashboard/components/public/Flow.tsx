@@ -1,12 +1,13 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Check, Clock3, PackageCheck, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Money } from "@/components/Money";
 import { DUR, EASE_IN_OUT, EASE_OUT, SPRING, SPRING_LANDING } from "@/components/motion-tokens";
 import { Punches } from "@/components/Punches";
 import { cn } from "@/lib/cn";
+import { useReduce } from "./useReduce";
 
 /** context.md section 2, steps 3 to 8, in the interface's words. */
 const STEPS = [
@@ -123,7 +124,7 @@ export function Flow() {
 /* ------------------------------------------------------------------ */
 
 function Stage({ step }: { step: number }) {
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReduce();
   const f = FRAMES[step]!;
   const presented = step >= 1;
   const released = step >= 4;

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowRight, Ban, Check } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { GateLane, type GateLaneHandle } from "@/components/GateLane";
 import { Guilloche } from "@/components/Guilloche";
 import { DUR, EASE_OUT } from "@/components/motion-tokens";
 import { PublicNav } from "./PublicNav";
+import { useReduce } from "./useReduce";
 
 const CENT = 10_000n;
 const START = 1_000_000n; // $1.00, an example balance
@@ -20,7 +21,7 @@ const START = 1_000_000n; // $1.00, an example balance
  * the gate refuses it. Labelled as an example: no one's real data.
  */
 export function Hero() {
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReduce();
   const lane = useRef<GateLaneHandle>(null);
   const box = useRef<HTMLDivElement>(null);
   const [pass, setPass] = useState(START);

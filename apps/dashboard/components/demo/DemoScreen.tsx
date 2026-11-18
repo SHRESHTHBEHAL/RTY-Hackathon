@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, LayoutGroup, motion, useAnimate, useReducedMotion, type TargetAndTransition, type Transition } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion, useAnimate, type TargetAndTransition, type Transition } from "motion/react";
 import { Ban, Check, CircleDollarSign, Hourglass, Play, Plus, RotateCcw, Send, TriangleAlert, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addMoney, resetDemo, startRun, stepRun, tryBlocked } from "@/app/demo/actions";
@@ -19,6 +19,7 @@ import { cn } from "@/lib/cn";
 import { formatRelative, formatUsd, shortId } from "@/lib/format";
 import { Kbd } from "./Kbd";
 import { rulesInWords, sentence } from "./words";
+import { useReduce } from "@/components/public/useReduce";
 
 const MESSAGES = 5;
 const CENT = "10000";
@@ -34,7 +35,7 @@ type Callout = DemoRefusal & { key: number; amountMicros: string };
 type LocalRow = { id: string; agentName: string; message: string; at: number };
 
 export function DemoScreen({ initial, initialError }: { initial: DemoSnapshot | null; initialError: string | null }) {
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReduce();
   const [snap, setSnap] = useState<DemoSnapshot | null>(initial);
   const [pollError, setPollError] = useState<string | null>(initialError);
   const lastTime = useRef(initial?.serverTime ?? 0);
@@ -111,7 +112,7 @@ export function DemoScreen({ initial, initialError }: { initial: DemoSnapshot | 
     (slot: number, r: DemoRefusal, amountMicros: string, agent: DemoAgent | undefined, at: number) => {
       let message = r.message;
       if (r.code === "insufficient_funds" && agent) {
-        message = `${agent.name} has ${formatUsd(agent.availableMicros)}, so Gaitway refused to put ${formatUsd(amountMicros)} on hold. Nothing was sent and nothing was charged.`;
+        message = `${agent.name} has ${formatUsd(agent.availableMicros)}, so Gaitway refused the ${formatUsd(amountMicros)} hold. Nothing was sent or charged.`;
       }
       const c: Callout = { ...r, message, key: ++calloutKey.current, amountMicros };
       setCallouts((m) => ({ ...m, [slot]: c }));
@@ -227,7 +228,6 @@ export function DemoScreen({ initial, initialError }: { initial: DemoSnapshot | 
     lanes.current.forEach((l) => l?.clear());
     try {
       const r = await resetDemo();
-      lastTime.current = 0;
       travelling.current.clear();
       setInflight([]);
       setCallouts({});
@@ -634,10 +634,10 @@ function AgentRow({
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0, transition: { duration: DUR.standard, ease: EASE_OUT, delay: reduce ? 0 : 0.36 } }}
               exit={{ opacity: 0, transition: { duration: DUR.quick } }}
-              className="relative z-30 mt-2 flex items-start gap-3 rounded-[10px] border border-stop/60 bg-[color-mix(in_srgb,var(--stop)_16%,var(--ink))] px-4 py-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] lg:absolute lg:bottom-0 lg:left-0 lg:mt-0 lg:w-[calc(50%-40px)]"
+              className="relative z-30 mt-2 flex items-start gap-3 rounded-[10px] border border-stop/60 bg-[color-mix(in_srgb,var(--stop)_16%,var(--ink))] px-4 py-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] lg:absolute lg:left-0 lg:top-[calc(50%+26px)] lg:mt-0 lg:w-[calc(50%-36px)]"
             >
               <Ban size={22} strokeWidth={2} className="mt-0.5 shrink-0 text-stop-bright" aria-hidden />
-              <p className="text-[17px] leading-snug text-on-ink lg:text-[18px]">
+              <p className="text-[17px] leading-snug text-on-ink lg:text-base 2xl:text-[18px]">
                 <span className="font-semibold text-stop-bright">Refused. {callout.sign}. </span>
                 {callout.message}
               </p>

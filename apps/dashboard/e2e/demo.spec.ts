@@ -42,7 +42,7 @@ test.describe("presentation screen (fixtures)", () => {
     await page.getByRole("article", { name: /Broke's pass/ }).getByRole("button", { name: "Run agent" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "Not enough balance" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/Broke has \$0\.00, so Gaitway refused/).first()).toBeVisible();
+    await expect(page.getByText(/Broke has \$0\.00, so Gaitway refused the/).first()).toBeVisible();
     // Give any stray poll time to land, then check nothing moved.
     await page.waitForTimeout(1500);
     expect(await amount(page, "balance-2")).toBe("$0.00");

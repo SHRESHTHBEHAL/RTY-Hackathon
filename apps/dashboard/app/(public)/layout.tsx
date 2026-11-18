@@ -1,8 +1,10 @@
 import { PublicFooter } from "@/components/public/PublicFooter";
+import { MotionUser } from "@/components/public/MotionUser";
 import { PublicNav } from "@/components/public/PublicNav";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
+    <MotionUser>
     <div className="flex min-h-dvh flex-col bg-paper">
       <a
         href="#content"
@@ -18,5 +20,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       </main>
       <PublicFooter />
     </div>
+    </MotionUser>
   );
 }

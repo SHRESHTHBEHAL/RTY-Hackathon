@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type KeyboardEvent } from "react";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { CodeBlock } from "./CodeBlock";
 import { Reveal } from "./Reveal";
 import { AGENT_SNIPPET, SELLER_SNIPPET } from "./snippets";
+import { useReduce } from "./useReduce";
 
 const TABS = [
   {
@@ -41,7 +42,7 @@ const TABS = [
 
 export function Integrate() {
   const [tab, setTab] = useState(0);
-  const reduce = useReducedMotion();
+  const reduce = useReduce();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const t = TABS[tab]!;
 
@@ -60,7 +61,7 @@ export function Integrate() {
           <div className="max-w-2xl">
             <p className="eyebrow">For developers</p>
             <h2 id="code-title" className="font-display mt-3 text-[40px] text-ink sm:text-[56px]">
-              About twenty lines each side
+              Roughly twenty lines to start charging
             </h2>
             <p className="mt-4 text-lg text-ink-soft">
               One package, <code className="rounded-[6px] bg-paper px-1.5 py-0.5 font-mono text-[0.9em]">@gaitway/sdk</code>, for both ends of

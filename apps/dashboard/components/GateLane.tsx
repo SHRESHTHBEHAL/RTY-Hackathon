@@ -103,7 +103,11 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
   { pass, seller, journeys, size = "md", showLabels = true, onJourneyEnd, onBeat, parties = true, className },
   ref,
 ) {
-  const reduce = useReducedMotion() ?? false;
+  // Read the preference only after hydration, so server and first client render match.
+  const prefersReduced = useReducedMotion() ?? false;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const reduce = mounted && prefersReduced;
   const laneRef = useRef<HTMLDivElement>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [sign, setSign] = useState<Sign | null>(null);

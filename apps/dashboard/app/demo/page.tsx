@@ -1,4 +1,5 @@
 import { DemoScreen } from "@/components/demo/DemoScreen";
+import { MotionUser } from "@/components/public/MotionUser";
 import { humanError } from "@/lib/api/errors";
 import { DemoConfigError, readSnapshot } from "./server";
 import type { DemoSnapshot } from "./types";
@@ -14,5 +15,9 @@ export default async function DemoPage() {
   } catch (e) {
     error = e instanceof DemoConfigError ? e.message : humanError(e);
   }
-  return <DemoScreen initial={initial} initialError={error} />;
+  return (
+    <MotionUser>
+      <DemoScreen initial={initial} initialError={error} />
+    </MotionUser>
+  );
 }

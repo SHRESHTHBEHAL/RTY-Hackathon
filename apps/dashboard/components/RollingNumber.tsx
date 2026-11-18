@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { DUR, EASE_OUT, exitOf } from "./motion-tokens";
 
@@ -24,7 +25,11 @@ export type RollingNumberProps = {
  * reduced motion the whole value cross-fades instead.
  */
 export function RollingNumber({ value, className, stagger = 0.03, label }: RollingNumberProps) {
-  const reduce = useReducedMotion();
+  // Read the preference only after hydration, so server and first client render match.
+  const prefersReduced = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const reduce = mounted && prefersReduced;
   const chars = [...value];
   const n = chars.length;
 

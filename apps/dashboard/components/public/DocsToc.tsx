@@ -1,15 +1,16 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
+import { useReduce } from "./useReduce";
 
 export type TocItem = { id: string; label: string; group?: string };
 
 /** Sticky section list that follows the reader's scroll position. */
 export function DocsToc({ items }: { items: TocItem[] }) {
   const [active, setActive] = useState(items[0]?.id);
-  const reduce = useReducedMotion();
+  const reduce = useReduce();
 
   useEffect(() => {
     const visible = new Map<string, number>();

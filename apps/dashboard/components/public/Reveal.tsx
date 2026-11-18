@@ -1,8 +1,9 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { DUR, EASE_OUT } from "@/components/motion-tokens";
+import { useReduce } from "./useReduce";
 
 /**
  * Scroll reveal for landing sections: rises 16px and fades in once, when
@@ -19,7 +20,7 @@ export function Reveal({
   className?: string;
   as?: "div" | "li" | "section";
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduce();
   const Tag = motion[as];
   return (
     <Tag
