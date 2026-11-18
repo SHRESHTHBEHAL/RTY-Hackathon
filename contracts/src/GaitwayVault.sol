@@ -93,6 +93,7 @@ contract GaitwayVault is IGaitwayVault, AccessControl, Pausable, ReentrancyGuard
     {
         _useKey(batchKey);
         uint256 n = items.length;
+        uint256 fees = 0;
         for (uint256 i = 0; i < n; ++i) {
             SettleItem calldata it = items[i];
             if (it.fee > it.gross) revert FeeExceedsGross();
@@ -103,11 +104,12 @@ contract GaitwayVault is IGaitwayVault, AccessControl, Pausable, ReentrancyGuard
             unchecked {
                 _balances[it.businessKey] = have - it.gross;
             }
-            _feeBalance += it.fee;
+            fees += it.fee;
             uint256 net = it.gross - it.fee;
             if (net > 0) token.safeTransfer(payout, net);
             emit Settled(batchKey, it.businessKey, it.sellerKey, it.gross, it.fee);
         }
+        _feeBalance += fees;
     }
 
     function withdraw(bytes32 withdrawalKey, bytes32 businessKey, uint256 amount)

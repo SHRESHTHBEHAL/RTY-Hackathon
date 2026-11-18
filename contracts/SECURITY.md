@@ -4,14 +4,26 @@
 
 ## Static analysis
 
-Slither was **not installed** on the build machine, so it was not run. Run before any audit:
+Slither 0.10.0, 93 detectors, run on `src/` (OpenZeppelin filtered out):
 
 ```sh
-pip install slither-analyzer
-slither contracts/src --solc-remaps "@openzeppelin/contracts/=contracts/node_modules/@openzeppelin/contracts/"
+pip install slither-analyzer "setuptools<81"
+cd contracts && slither . --filter-paths node_modules
 ```
 
-`forge lint` (built into `forge build`) reports only style notes (immutable naming).
+(On Windows, run it from a short path; very long paths make crytic-compile fail with "Unknown file".)
+
+First run: 7 results, none high or medium. One fixed, six justified:
+
+| # | Detector | Where | Verdict |
+|---|---|---|---|
+| 1 | costly-loop | `settle`: `_feeBalance += it.fee` inside the loop | **Fixed.** Fees are summed in memory and written once after the loop. |
+| 2 | incorrect-equality | `deposit`: `received == 0` | **Justified.** A guard that refuses to credit a deposit that moved no tokens; it cannot be steered to lock funds. |
+| 3 | timestamp | `executeExit`: `block.timestamp < at` | **Justified.** The delay is 7 days; validator timestamp drift (seconds) is irrelevant. |
+| 4–6 | solc-version | `^0.8.24` in all three files | **Justified.** The version is fixed by `context.md` §5. Builds pin 0.8.24 in `foundry.toml`. |
+| 7 | solc-version | "0.8.24 not recommended" | Same as 4–6. Re-check against the auditor's preferred compiler before mainnet. |
+
+After the fix, the second run reports 6 results (2–7 above). `forge lint` reports only style notes (immutable naming).
 
 ## What is defended, and how
 
