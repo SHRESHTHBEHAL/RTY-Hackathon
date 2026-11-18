@@ -9,6 +9,8 @@ import { registerAgentRoutes } from "./routes/agents.js";
 import { registerFundsRoutes } from "./routes/funds.js";
 import { registerJwks } from "./credentials/jwks.js";
 import { registerCredentialRoutes } from "./routes/credentials.js";
+import { registerChargeRoutes } from "./routes/charges.js";
+import { registerSellerRoutes } from "./routes/seller.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -43,6 +45,8 @@ export function buildApp(deps: Deps): App {
   registerFundsRoutes(app, deps);
   registerJwks(app, deps);
   registerCredentialRoutes(app, deps);
+  registerChargeRoutes(app, deps);
+  registerSellerRoutes(app, deps);
 
   return app;
 }
