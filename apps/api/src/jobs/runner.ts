@@ -2,6 +2,8 @@ import type { Deps } from "../deps.js";
 import { logOf } from "../deps.js";
 import { runDepositJob } from "./deposits.js";
 import { runSweeper } from "./sweeper.js";
+import { runWithdrawalJob } from "./withdrawals.js";
+import { runWebhookJob } from "./webhooks.js";
 import { runSettlement } from "./settlement.js";
 import { runReconcile, type ReconcileResult } from "./reconcile.js";
 
@@ -31,6 +33,8 @@ export function startJobs(deps: Deps): JobsHandle {
   const fast = guard("deposits/sweeper", async () => {
     await runDepositJob(deps);
     await runSweeper(deps);
+    await runWithdrawalJob(deps);
+    await runWebhookJob(deps);
   });
   const settle = guard("settlement", async () => {
     const r = await runSettlement(deps);

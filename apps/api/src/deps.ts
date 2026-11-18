@@ -11,6 +11,8 @@ export type AppState = {
 export type Hooks = {
   /** Test hook: runs right after vault.settle resolves, before the DB is updated. */
   afterVaultSettle?: (batchId: string) => void | Promise<void>;
+  /** Test hook: runs right after vault.withdraw resolves, before the DB is updated. */
+  afterVaultWithdraw?: (withdrawalId: string) => void | Promise<void>;
   /** Test hook: runs right before vault.settle is called. */
   beforeVaultSettle?: (batchId: string) => void | Promise<void>;
 };
