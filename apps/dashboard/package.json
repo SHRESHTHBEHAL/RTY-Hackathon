@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@gaitway/sdk": "workspace:*",
     "lucide-react": "^1.75.0",
     "motion": "^12.23.0",
     "next": "^16.4.6",

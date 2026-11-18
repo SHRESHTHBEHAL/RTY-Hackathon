@@ -807,6 +807,27 @@ function seed(s: Store, now: number): Store {
   events.sort((x, y) => x.at - y.at);
   for (const e of events) e.run();
 
+  // Two standing subscriptions (mandates) to Relay, so the business has some to see and revoke.
+  const seedMandates: Array<[string, bigint, Mandate["period"], number]> = [
+    [scout.agent.id, 5_000_000n, "month", t0 + 1 * DAY],
+    [buyer.agent.id, 2_000_000n, "week", t0 + 3 * DAY],
+  ];
+  for (const [agentId, max, period, at] of seedMandates) {
+    const a = A(agentId);
+    const id = newId(s, "mdt");
+    s.mandates.set(id, {
+      id,
+      walletId: a.agent.walletId,
+      agentId,
+      sellerId: relay.id,
+      maxPerPeriodMicros: m(max),
+      period,
+      status: "active",
+      createdAt: iso(at),
+      token: placeholderToken("mandate", { sub: agentId, aud: relay.id, jti: id, maxPerPeriod: m(max), period }),
+    });
+  }
+
   // Keys for the demo screen and tests (fixture only).
   const keys = {
     business: biz.apiKey,

@@ -10,6 +10,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@gaitway/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       lucide-react:
         specifier: ^1.75.0
         version: 1.75.0(@types/react@19.3.0)(react@19.3.1)

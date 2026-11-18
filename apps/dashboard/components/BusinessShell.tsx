@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bot, LayoutGrid, Settings, Wallet } from "lucide-react";
+import { Activity, Bot, LayoutGrid, Repeat, Settings, Wallet } from "lucide-react";
 import type { ReactNode } from "react";
 import { Shell, type NavItem, type ShellAccount } from "./Shell";
 
@@ -9,6 +9,7 @@ export const BUSINESS_NAV: NavItem[] = [
   { href: "/business/agents", label: "Agents", icon: Bot },
   { href: "/business/funds", label: "Funds", icon: Wallet },
   { href: "/business/activity", label: "Activity", icon: Activity },
+  { href: "/business/subscriptions", label: "Subscriptions", icon: Repeat },
   { href: "/business/settings", label: "Settings", icon: Settings },
 ];
 

@@ -59,6 +59,19 @@ export type GateLaneProps = {
   /** Column labels above the lane ("Agent pass · Gate · Seller"). */
   showLabels?: boolean;
   onJourneyEnd?: (j: { id: string; outcome: GateJourney["outcome"] }) => void;
+  /**
+   * Fires at the physical moments of a journey, for screens that draw the
+   * pass or seller themselves: "landed" (approved token reaches the seller),
+   * "hit" (refused token meets the shut gate), "bounced" (it is back at the pass).
+   * Under reduced motion "landed" or "hit" fires when the gate changes colour.
+   */
+  onBeat?: (beat: "landed" | "hit" | "bounced", j: { id: string; outcome: GateJourney["outcome"] }) => void;
+  /**
+   * false draws the lane and gate only, without the pass and seller cards,
+   * so a screen can place its own passes and seller at the lane's ends.
+   * Default true.
+   */
+  parties?: boolean;
   className?: string;
 };
 
@@ -87,7 +100,7 @@ const TOKEN = 22; // px, token diameter
  * token travels: the gate changes colour and the sign cross-fades in.
  */
 export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateLane(
-  { pass, seller, journeys, size = "md", showLabels = true, onJourneyEnd, className },
+  { pass, seller, journeys, size = "md", showLabels = true, onJourneyEnd, onBeat, parties = true, className },
   ref,
 ) {
   const reduce = useReducedMotion() ?? false;
@@ -103,6 +116,8 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
   const played = useRef(new Set<string>());
   const onEndRef = useRef(onJourneyEnd);
   onEndRef.current = onJourneyEnd;
+  const onBeatRef = useRef(onBeat);
+  onBeatRef.current = onBeat;
 
   /* --- Gate: open while any approved token holds a lease; a refusal slams it. --- */
   const leases = useRef(new Set<string>());
@@ -222,7 +237,8 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
       syncGate();
     },
     passed: () => flashTone("go", 520),
-    hit: (reason: string) => {
+    hit: (reason: string, j?: Flight) => {
+      if (j) onBeatRef.current?.("hit", { id: j.id, outcome: j.outcome });
       slamUntil.current = Date.now() + 320;
       syncGate();
       setTimeout(syncGate, 330);
@@ -230,8 +246,12 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
       setJolt((n) => n + 1);
       showSign("refused", reason, 2600);
     },
-    bounced: () => setPassShake((n) => n + 1),
-    landed: () => {
+    bounced: (j?: Flight) => {
+      setPassShake((n) => n + 1);
+      if (j) onBeatRef.current?.("bounced", { id: j.id, outcome: j.outcome });
+    },
+    landed: (j?: Flight) => {
+      if (j) onBeatRef.current?.("landed", { id: j.id, outcome: j.outcome });
       setLandPulse((n) => n + 1);
       setFlashes((f) => [...f, Date.now() + Math.random()]);
       showSign("approved", "Approved", 1300);
@@ -249,6 +269,7 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
     for (const f of flights) {
       if (handledStill.current.has(f.id)) continue;
       handledStill.current.add(f.id);
+      onBeatRef.current?.(f.outcome === "approved" ? "landed" : "hit", { id: f.id, outcome: f.outcome });
       if (f.outcome === "approved") {
         flashTone("go", 900);
         showSign("approved", "Approved", 1600);
@@ -261,6 +282,49 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
   }, [reduce, flights, finish, flashTone, showSign]);
 
   const lg = size === "lg";
+
+  const lane = (
+    <div ref={laneRef} className={cn("relative", lg ? "h-48" : "h-32 sm:h-36")}>
+      <LaneFloor reduce={reduce} />
+
+      {/* Green flash runs down the lane after a landing */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-10 -translate-y-1/2 overflow-hidden">
+        <AnimatePresence>
+          {flashes.map((k) => (
+            <motion.span
+              key={k}
+              className="absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-transparent via-go-bright/45 to-transparent"
+              initial={{ x: "-100%", opacity: 0 }}
+              animate={{ x: "250%", opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 0.42, ease: EASE_OUT }}
+              onAnimationComplete={() => setFlashes((f) => f.filter((x) => x !== k))}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <Gate open={gateOpen} tone={gateTone} jolt={jolt} reduce={reduce} lg={lg} />
+
+      <GateSign sign={sign} lg={lg} />
+
+      {/* Tokens */}
+      {!reduce &&
+        flights.map((f) => (
+          <Token key={f.id} flight={f} laneRef={laneRef} beats={beats} onDone={() => finish(f.id)} />
+        ))}
+    </div>
+  );
+
+  if (!parties) {
+    return (
+      <div className={cn("relative w-full select-none", className)} role="group" aria-label={`Payment lane from ${pass.name} to ${seller.name}`}>
+        <p className="sr-only" aria-live="polite">
+          {announce}
+        </p>
+        {lane}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -298,41 +362,7 @@ export const GateLane = forwardRef<GateLaneHandle, GateLaneProps>(function GateL
         </ShakeOnChange>
 
         {/* Lane */}
-        <div ref={laneRef} className={cn("relative", lg ? "h-48" : "h-32 sm:h-36")}>
-          <LaneFloor reduce={reduce} />
-
-          {/* Green flash runs down the lane after a landing */}
-          <div className="pointer-events-none absolute inset-x-0 top-1/2 h-10 -translate-y-1/2 overflow-hidden">
-            <AnimatePresence>
-              {flashes.map((k) => (
-                <motion.span
-                  key={k}
-                  className="absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-transparent via-go-bright/45 to-transparent"
-                  initial={{ x: "-100%", opacity: 0 }}
-                  animate={{ x: "250%", opacity: [0, 1, 1, 0] }}
-                  transition={{ duration: 0.42, ease: EASE_OUT }}
-                  onAnimationComplete={() => setFlashes((f) => f.filter((x) => x !== k))}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-
-          <Gate open={gateOpen} tone={gateTone} jolt={jolt} reduce={reduce} lg={lg} />
-
-          <GateSign sign={sign} lg={lg} />
-
-          {/* Tokens */}
-          {!reduce &&
-            flights.map((f) => (
-              <Token
-                key={f.id}
-                flight={f}
-                laneRef={laneRef}
-                beats={beats}
-                onDone={() => finish(f.id)}
-              />
-            ))}
-        </div>
+        {lane}
 
         {/* Seller */}
         <div className="relative z-10">
@@ -564,9 +594,9 @@ type Beats = {
   gateOpen: (id: string) => void;
   gateClose: (id: string) => void;
   passed: () => void;
-  hit: (reason: string) => void;
-  bounced: () => void;
-  landed: () => void;
+  hit: (reason: string, j?: Flight) => void;
+  bounced: (j?: Flight) => void;
+  landed: (j?: Flight) => void;
 };
 
 /**
@@ -614,7 +644,7 @@ function Token({ flight, laneRef, beats, onDone }: { flight: Flight; laneRef: Re
       after(520, () => b().gateClose(flight.id));
       await run({ x: [start, end] }, { duration: 0.7, ease: EASE_IN_OUT });
       if (cancelled) return;
-      b().landed();
+      b().landed(flight);
       // Land: a small squash, then a spring settle while it is absorbed into the seller.
       if (tag) animate(tag, { opacity: 0 }, { duration: 0.1 });
       if (body) {
@@ -632,7 +662,7 @@ function Token({ flight, laneRef, beats, onDone }: { flight: Flight; laneRef: Re
       const contact = gate - TOKEN / 2 - 3;
       await run({ x: [start, contact] }, { duration: 0.38, ease: [0.45, 0, 0.8, 0.5] });
       if (cancelled) return;
-      b().hit(flight.reason ?? "Refused");
+      b().hit(flight.reason ?? "Refused", flight);
       // Compress against the shut arms.
       if (body) await animate(body, { scaleX: 0.58, scaleY: 1.28 }, { duration: 0.07, ease: EASE_OUT });
       if (cancelled) return;
@@ -640,7 +670,7 @@ function Token({ flight, laneRef, beats, onDone }: { flight: Flight; laneRef: Re
       if (body) animate(body, { scaleX: 1, scaleY: 1 }, SPRING_LANDING);
       await run({ x: start + 6 }, SPRING_LANDING);
       if (cancelled) return;
-      b().bounced();
+      b().bounced(flight);
       await run({ x: [start + 6, start + 2, start + 9, start + 3, start + 6] }, { duration: 0.24, ease: "easeInOut" });
       if (cancelled) return;
       await run({ opacity: 0, scale: 0.6 }, { duration: 0.14, ease: EASE_OUT });
