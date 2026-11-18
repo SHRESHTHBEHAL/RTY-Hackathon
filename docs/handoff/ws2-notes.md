@@ -4,7 +4,7 @@ Branch: `ws2-core`. Owner dirs: root config files, `apps/api/`, this file.
 
 ## Status: Milestone 1 (Tasks 1–10) and Milestone 2 (Tasks 11–18) complete.
 
-Tests: 89 tests in 20 files, all passing against Postgres 16 (`pnpm --filter @gaitway/api test`).
+Tests: 92 tests in 21 files, all passing against Postgres 16 (`pnpm --filter @gaitway/api test`).
 `pnpm --filter @gaitway/api build` is clean.
 
 ### Milestone 2 summary
@@ -128,7 +128,23 @@ idempotent charges, and crashes before and after the vault settle call.
 
 ## For the integrator (§12)
 
-1. Add `"@gaitway/chain": "workspace:*"` to `apps/api/package.json`.
-2. Create `apps/api/src/vault/chain.ts` calling `createVaultClient` with the
-   §10 settings, and return it from `getVault()` when `VAULT_DRIVER=chain`.
-3. `CONFIRMATIONS` must match the chain client's (used by reconcile, see 10).
+`apps/api/src/vault/chain.ts` already exists: with `VAULT_DRIVER=chain` it
+loads `@gaitway/chain` at runtime and calls `createVaultClient` with the §10
+settings. Only the dependency is left:
+
+1. Add `"@gaitway/chain": "workspace:*"` to `apps/api/package.json` dependencies.
+2. `pnpm --filter @gaitway/chain build` (its `exports` point at `dist/`), then `pnpm install`.
+3. Start the chain: `pnpm --filter @gaitway/chain chain:dev`. Paste the printed
+   `RPC_URL`, `CHAIN_ID`, `VAULT_ADDRESS`, `USDC_ADDRESS`, `ADMIN_PRIVATE_KEY`,
+   `TEST_ADDRESS_MNEMONIC` and `CONFIRMATIONS` into `apps/api/.env`. Set
+   `VAULT_DEPLOY_BLOCK` to `deployBlock` from `contracts/deployments/<chainId>.json`,
+   and set `VAULT_DRIVER=chain`.
+4. Reset the database first (`docker compose down -v`, then up). Data seeded
+   against the memory vault does not exist on the chain.
+5. CORS is on (`CORS_ORIGINS`, default `*`), so the dashboard on :3000 can call the API.
+
+Notes from reading `ws1-vault`: its `getConfirmedBlock` is `head - (confirmations - 1)`,
+and `getDeposits` never returns anything above the confirmed block. So reconciliation
+can briefly see vault money (a fresh deposit) that the ledger has not credited yet.
+Reconcile reports that, but pauses settlement only on a shortfall, and not while a
+batch or withdrawal is in flight. That settles item 10 above.

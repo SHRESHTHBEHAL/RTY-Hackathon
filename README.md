@@ -118,11 +118,103 @@ See [RULES.md](RULES.md) for the full list.
 
 ## Your project
 
-_Replace this section with your project README:_
-- **Team:**
-- **Track:**
-- **Problem:** who faces it and why it happens
-- **What we built:** the core workflow
-- **The hardest part:** how we solved it
-- **How to run it:**
-- **Demo / screenshots:**
+### Gaitway: a payment gateway for AI agents
+
+- **Team:** darWIN (Shreshth Behal, Ronit Pahuja, Aadhar Gupta)
+- **Track:** Build for AI Agents (`ai-agents`)
+
+#### Problem
+
+Businesses now run AI agents that need to buy things on their own: an API
+call, a message, a dataset, a few cents at a time. Today's payment rails
+assume a human:
+- cards need someone to type details and pass checks;
+- fixed per-transaction fees make one-cent payments pointless;
+- handing an agent the company card gives no per-agent budget, no limits,
+  and no record of which agent spent what.
+
+Sellers have no standard way to say "pay me per call" to an agent, and no
+safe way to check that an agent can pay before serving it. So agents either
+can't pay at all, or they are given far more access to money than they
+should have.
+
+#### What we built
+
+- A **business** funds a wallet per agent and sets how much each may spend.
+- A **seller** integrates Gaitway once, like a card gateway.
+- An **agent** asks Gaitway for a short-lived signed credential naming the
+  seller and a maximum. That amount is put on hold in its wallet.
+- The seller verifies the credential locally, charges it through the API,
+  and only then delivers. Unused hold returns to the wallet.
+- The money sits in a vault smart contract holding USDC. A fast off-chain
+  double-entry ledger tracks every wallet, and sellers are paid on-chain in
+  batches. Nobody using Gaitway touches crypto or pays network fees.
+
+| Part | Where |
+|---|---|
+| Vault contract and chain client | `contracts/`, `packages/chain/` |
+| Ledger and HTTP API | `apps/api/` (see `apps/api/README.md`) |
+| Seller and agent SDKs, MCP server, dashboard, demo | `packages/sdk/`, `packages/mcp/`, `apps/dashboard/`, `apps/demo/` |
+
+Beyond the core flow:
+- spending rules (per-payment, daily, allowed sellers)
+- subscriptions (mandates), push transfers, refunds, withdrawals
+- a seller directory, signed webhooks
+- a policy hook, so a business can put its own approval service
+  (for example Dwarpal) in front of every payment
+
+#### The hardest part
+
+Moving money correctly when many agents pay at once and anything can crash.
+- Every balance change goes through one ledger function. It runs inside a
+  single database transaction, locks accounts in a fixed order (so no
+  deadlocks), and refuses to let any balance go negative. Amounts are whole
+  millionths of a dollar, never floats.
+- Charges are idempotent: a seller retrying after a timeout gets the
+  byte-identical reply and the agent pays once.
+- Settlement to the vault is keyed by batch ID. If the server dies after the
+  on-chain payout but before recording it, the next run finishes the batch
+  instead of paying twice.
+- A reconciliation job checks the ledger against the vault after every
+  settlement and stops settlement if money is missing.
+
+These cases are tested against a real Postgres:
+- 20 concurrent postings and concurrent credential requests on one wallet
+- 10 concurrent charges on one credential
+- a charge racing the expiry sweeper
+- crashes before and after the vault call
+
+#### How to run it
+
+```bash
+# Postgres (set GAITWAY_PG_PORT if 5432 is taken)
+docker compose up -d --wait
+
+# API on :8787 (in-memory vault by default; VAULT_DRIVER=chain for the real one)
+cd apps/api && cp .env.example .env && pnpm install && pnpm dev
+
+# Seed the demo business, seller "Relay" and three agents (50 / 30 / 0 dollars)
+pnpm --filter @gaitway/api seed:demo
+
+# Tests
+pnpm --filter @gaitway/api test
+```
+
+Local chain, dashboard and demo: see `packages/chain/README.md` and the
+`apps/` READMEs. The steps to wire everything together are in `context.md`
+section 12.
+
+#### Demo
+
+1. A business signs up, creates three agents, tops up 100 test dollars and
+   funds each wallet differently.
+2. Relay, a sample messaging API, charges one cent per message.
+3. An agent sends messages through Relay and pays as it goes, with no human.
+4. The dashboard shows the agent's wallet falling and Relay's balance rising.
+5. An agent with an empty wallet is refused.
+6. Settlement pays Relay in test USDC on-chain, and reconciliation reports no
+   difference.
+
+Live (real-money) mode stays off until there is a licensing opinion, a
+currency partner, an identity-check provider and an independent audit of the
+vault. The currency and identity integrations are simulations today.
