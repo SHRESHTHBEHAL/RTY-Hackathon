@@ -120,10 +120,6 @@ See [RULES.md](RULES.md) for the full list.
 
 # Gaitway: a payment gateway for AI agents
 
-> The payment rails AI agents have been missing, built today. This is
-> where the agent economy starts: every agent will need to pay, and
-> Gaitway is how they will.
-
 - **Team:** darWIN: Shreshth Behal, Ronit Pahuja, Aadhar Gupta
 - **Track:** Build for AI Agents (`ai-agents`)
 
