@@ -19,7 +19,7 @@ export const metadata = { title: "Overview" };
 
 export default async function BusinessOverview() {
   const res = await load(async (gw) => {
-    const [balance, agents, tx] = await Promise.all([gw.getBalance(), gw.listAgents({ limit: 200 }), gw.listTransactions({ limit: 8 })]);
+    const [balance, agents, tx] = await Promise.all([gw.getBalance(), gw.listAgents({ limit: 200 }), gw.listTransactions({ limit: 6 })]);
     return { balance, agents: agents.data, tx: tx.data };
   });
 

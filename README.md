@@ -148,9 +148,10 @@ its wallet holds.
   it. See `docs/handoff/ws1-notes.md`.
 - `apps/demo`: Relay, a sample paid messaging API, and an agent that pays
   it one cent per message.
-- `apps/dashboard`: the web app. Sign-up and log-in, a seller dashboard,
-  a business dashboard, and the "gate lane" animation showing each payment
-  passing or being refused.
+- `apps/dashboard`: the web app. A landing page, docs, a seller
+  directory, sign-up and log-in, a business dashboard, a seller dashboard,
+  and a live demo screen at `/demo` where the "gate lane" animation shows
+  each payment passing or being refused.
 
 ### The hardest part
 
@@ -167,9 +168,8 @@ tools return.
 No real money moves. The ledger backend described in `PLAN.md` and
 `context.md` is designed but not built, so the SDK, demo, and MCP server
 run against a stand-in API that keeps balances in memory, and the vault is
-not yet wired to them. The dashboard runs on built-in sample data. The
-business screens, landing page, and live demo screen were still being
-finished at code freeze.
+not yet wired to them. The dashboard runs on built-in sample data, and its
+live mode has not been run against a real API.
 
 ### How to run it
 
@@ -194,5 +194,6 @@ Code, see `packages/mcp/README.md`.
 2. With the SDK, the agent Scout sends five messages and pays one cent
    each from its own wallet.
 3. Broke, an agent with an empty wallet, is refused and nothing is sent.
-4. The dashboard shows the seller's balance and charges, and `/styleguide`
-   shows the gate lane playing an approved and a refused payment.
+4. Open `http://localhost:3000/demo`. Press `1`, `2`, or `3` to run an
+   agent, `B` to try a $5.00 payment against a $2.00 limit (refused at
+   the gate with the reason), and `R` to reset.

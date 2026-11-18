@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionReveal } from "@/components/SectionReveal";
 import { AgentHeader, AgentMoney, RulesSummary } from "@/components/business/AgentDetail";
@@ -19,7 +21,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     const { agent, wallet } = await gw.getAgent(id);
     const [balance, tx, keys, rules, sellers] = await Promise.all([
       gw.getBalance(),
-      gw.listTransactions({ walletId: agent.walletId, limit: 50 }),
+      gw.listTransactions({ walletId: agent.walletId, limit: 11 }),
       gw.listAgentKeys(agent.id, { limit: 200 }),
       gw.getAgentRules(agent.id),
       gw.listSellers({ limit: 200 }).catch(() => ({ data: [], nextCursor: null })),
@@ -58,10 +60,18 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           />
         </div>
         <section aria-labelledby="tx-title">
-          <h2 id="tx-title" className="mb-4 font-display text-2xl text-ink">
-            {agent.name}&apos;s transactions
-          </h2>
-          <TxTable rows={tx} names={agentNames([agent])} label={`${agent.name}'s transactions`} />
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-x-3">
+            <h2 id="tx-title" className="font-display text-2xl text-ink">
+              {agent.name}&apos;s transactions
+            </h2>
+            {tx.length > 10 ? (
+              <Link href={`/business/activity?agent=${agent.id}`} className="group inline-flex h-11 shrink-0 items-center gap-1.5 rounded-[8px] text-[15px] font-semibold text-pass">
+                All of {agent.name}&apos;s activity
+                <ArrowRight size={16} strokeWidth={2} aria-hidden className="transition-transform duration-[var(--dur-quick)] group-hover-fine:translate-x-0.5" />
+              </Link>
+            ) : null}
+          </div>
+          <TxTable rows={tx.slice(0, 10)} names={agentNames([agent])} label={`${agent.name}'s transactions`} />
         </section>
       </SectionReveal>
     </LedgerProvider>
