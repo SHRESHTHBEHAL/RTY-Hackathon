@@ -2,7 +2,35 @@
 
 Branch: `ws2-core`. Owner dirs: root config files, `apps/api/`, this file.
 
-## Status: Milestone 1 complete (Tasks 1–10). Milestone 2 not started.
+## Status: Milestone 1 (Tasks 1–10) and Milestone 2 (Tasks 11–18) complete.
+
+Tests: 89 tests in 20 files, all passing against Postgres 16 (`pnpm --filter @gaitway/api test`).
+`pnpm --filter @gaitway/api build` is clean.
+
+### Milestone 2 summary
+
+- **Rules** (`src/rules/check.ts`): per-payment max and allow-list at credential/mandate/transfer
+  time; daily max (UTC day) at charge time, serialised per agent by locking the agent row.
+- **Mandates**: `gaitway-mandate+jwt` tokens (one year), `POST /v1/mandate-charges` from
+  available with no hold, calendar day / ISO week / calendar month periods in UTC, revoke.
+- **Transfers**: push payments, idempotent, rules + policy hook apply.
+- **Refunds**: default to the full remaining amount; fee share returned in proportion (rounded
+  down) for charges not yet in a settlement batch. Unsettled refunds net against the next
+  settlement batch for the same business and seller (see item 13 below).
+- **Withdrawals**: unallocated → `withdrawing` → vault, keyed by withdrawal ID; a crash after the
+  vault call completes once on retry (job every 5 s).
+- **Directory** (`GET /v1/sellers?query=`, `GET /v1/sellers/:id`), **webhooks**
+  (`payout.sent`, `charge.refunded`, `mandate.revoked`; HMAC `gaitway-signature`; 5 attempts with
+  exponential backoff).
+- **Policy hook**: called outside any transaction, 2 s timeout, signed, anything but a valid
+  `allow` refuses with `rule_violation` and `details: { outcome, approvalLink }`.
+- **Slots**: `RampProvider` and `IdentityProvider` with **simulated** implementations only
+  (`RAMP_PROVIDER=simulated`, `IDENTITY_PROVIDER=simulated`). Nothing real is wired.
+- **Hardening**: live keys refused unless `LIVE_ENABLED=true`, and live/test data never mix;
+  rate limit (`RATE_LIMIT_PER_10S`, default 100 per key or session) → HTTP 429;
+  `GET /v1/openapi.json` lists every section 8 route.
+
+## Milestone 1 detail
 
 What exists in `apps/api`:
 
@@ -58,6 +86,30 @@ idempotent charges, and crashes before and after the vault settle call.
     in `paidOutMicros`.
 12. **Business `GET /v1/credentials/:id`.** §8 allows only the named seller and
     the owning agent; a business key gets `forbidden`.
+13. **Refunds after settlement cannot be represented on the vault.** The vault has
+    no way to move money from one business's balance to another or back from a
+    seller. Core therefore nets each unsettled refund against the next batch for
+    the *same business and seller*. A pair whose net would be negative waits for
+    later charges. Reconciliation counts unsettled refunds, so it stays
+    consistent. For a settled charge the platform keeps its fee and the seller's
+    owed balance covers the whole refund.
+14. **`perPaymentMaxMicros` and mandates.** A mandate has no `maxMicros`, so the
+    per-payment maximum is checked on each mandate charge, and the allow-list
+    when the mandate is created.
+15. **Policy hook failures.** A timeout, a non-200 reply or a malformed body are
+    reported as `rule_violation` with `details.outcome = "block"` and
+    `approvalLink: null`; the contract does not name an outcome for these.
+16. **Transfers and the policy hook on retry.** The hook is called before the
+    idempotency check, so a retried transfer asks the hook again.
+17. **Errors not in the table.** Rate limiting returns HTTP 429 with code
+    `rate_limited`, which is not in the section 8 error table.
+18. **Routes not in section 8.** Two extra routes: `POST /v1/verification` runs
+    the identity provider (simulated), and `GET /v1/openapi.json` is the route
+    list. `PUT /v1/payout-address` re-registers the seller on the vault.
+19. **Withdrawals the vault rejects** stay `pending` and are retried every 5 s;
+    the `Withdrawal` type has no `failed` status.
+20. **Live data.** Signup always creates test accounts, so live data exists only
+    for `gw_live_` keys. No route issues one yet; that waits for section 15.
 
 ## Deviations from the plan / stack
 

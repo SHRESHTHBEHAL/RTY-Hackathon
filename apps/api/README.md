@@ -55,7 +55,16 @@ pnpm --filter @gaitway/api build
 | `VAULT_DRIVER` | `memory` | `chain` is wired at integration (context.md §12) |
 | `SETTLE_INTERVAL_SECONDS` | `30` | settlement + reconciliation cadence |
 | `SESSION_SECRET` | — | required, 16+ chars |
+| `RAMP_PROVIDER` | `none` | `simulated` = **simulation** of a currency partner (uses the vault's test deposit) |
+| `IDENTITY_PROVIDER` | `none` | `simulated` = **simulation**: marks every business verified, checks nothing |
+| `RATE_LIMIT_PER_10S` | `100` | per API key or session; then HTTP 429 `rate_limited` |
 | `RPC_URL`, `CHAIN_ID`, `VAULT_ADDRESS`, `USDC_ADDRESS`, `ADMIN_PRIVATE_KEY`, `TEST_ADDRESS_MNEMONIC`, `CONFIRMATIONS` | | chain driver |
+
+The route list is served at `GET /v1/openapi.json`.
+
+**Both the currency partner and the identity provider are simulations.** No real
+money and no real identity check exist until the items in context.md section 15
+are in place.
 
 ## How it works
 
