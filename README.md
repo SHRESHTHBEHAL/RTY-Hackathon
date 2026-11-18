@@ -188,6 +188,22 @@ Sample dashboard logins are at the top of
 `apps/dashboard/lib/api/fixtures.ts`. To connect the MCP server to Claude
 Code, see `packages/mcp/README.md`.
 
+**Full stack (API, vault, Postgres):**
+
+```bash
+docker compose up -d --wait                        # Postgres (GAITWAY_PG_PORT if 5432 is taken)
+(cd contracts && pnpm install) && (cd packages/chain && pnpm install)
+pnpm --filter @gaitway/chain chain:dev             # anvil on 8545 + vault deploy; prints settings
+cd apps/api && cp .env.example .env && pnpm install && pnpm dev   # API on :8787 (VAULT_DRIVER=chain for the real vault)
+pnpm --filter @gaitway/api seed:demo               # business, seller "Relay", three agents (50 / 30 / 0 dollars)
+pnpm --filter @gaitway/api test
+(cd contracts && forge test)                       # 33 vault tests (needs Foundry)
+pnpm --filter @gaitway/chain test                  # 21 chain-client tests
+```
+
+Wiring everything together: `context.md` section 12.
+
+
 ### Demo
 
 1. Without Gaitway, an agent calls Relay and gets "402 Payment Required".
@@ -196,3 +212,7 @@ Code, see `packages/mcp/README.md`.
 3. Broke, an agent with an empty wallet, is refused and nothing is sent.
 4. The dashboard shows the seller's balance and charges, and `/styleguide`
    shows the gate lane playing an approved and a refused payment.
+
+Live (real-money) mode stays off until there is a licensing opinion, a
+currency partner, an identity-check provider and an independent audit of the
+vault. The currency and identity integrations are simulations today.
