@@ -6,6 +6,9 @@ import type { Principal } from "./auth/principal.js";
 import { registerAccountRoutes } from "./routes/accounts.js";
 import { registerKeyRoutes } from "./routes/keys.js";
 import { registerAgentRoutes } from "./routes/agents.js";
+import { registerFundsRoutes } from "./routes/funds.js";
+import { registerJwks } from "./credentials/jwks.js";
+import { registerCredentialRoutes } from "./routes/credentials.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -37,6 +40,9 @@ export function buildApp(deps: Deps): App {
   registerAccountRoutes(app, deps);
   registerKeyRoutes(app, deps);
   registerAgentRoutes(app, deps);
+  registerFundsRoutes(app, deps);
+  registerJwks(app, deps);
+  registerCredentialRoutes(app, deps);
 
   return app;
 }

@@ -99,4 +99,55 @@ export const SCHEMA: string[] = [
     business_id text not null,
     created_at timestamptz not null default now()
   )`,
+
+  // --- Top-ups and deposits (Task 5) ---
+  `create table if not exists topups (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    business_id text not null,
+    amount_micros bigint not null check (amount_micros > 0),
+    method text not null check (method in ('test','ramp')),
+    status text not null check (status in ('pending','confirmed','failed')),
+    tx_hash text,
+    created_at timestamptz not null default now()
+  )`,
+  `create index if not exists topups_business_idx on topups (env, business_id, seq desc)`,
+  `create table if not exists chain_cursor (
+    name text primary key,
+    last_block bigint not null
+  )`,
+  `create table if not exists deposits_seen (
+    tx_hash text not null,
+    log_index integer not null,
+    business_id text,
+    amount_micros bigint not null,
+    block_number bigint not null,
+    created_at timestamptz not null default now(),
+    primary key (tx_hash, log_index)
+  )`,
+
+  // --- Credentials (Task 6) ---
+  `create table if not exists signing_keys (
+    id text primary key,
+    kid text not null,
+    private_jwk jsonb not null,
+    public_jwk jsonb not null,
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists credentials (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    agent_id text not null,
+    wallet_id text not null,
+    business_id text not null,
+    seller_id text not null,
+    max_micros bigint not null check (max_micros > 0),
+    remaining_micros bigint not null check (remaining_micros >= 0),
+    status text not null check (status in ('active','released','expired','exhausted')),
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+  )`,
+  `create index if not exists credentials_active_idx on credentials (expires_at) where status = 'active'`,
 ];
