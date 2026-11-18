@@ -47,7 +47,7 @@ Results at hand-off: `forge test` 33 passed (30 unit, 2 deploy, 1 invariant at 6
    `head - (confirmations - 1)`. Built to the plan. Under the literal §9 reading, with anvil's
    one-block-per-transaction mining and `CONFIRMATIONS=1`, a top-up would stay `pending` until
    some unrelated transaction mined a block, which would stall the demo.
-2. **`pnpm --filter @gaitway/chain chain:dev`** needs the root `pnpm-workspace.yaml`, which Core
+2. **Fixed at integration:** `contracts` is now listed in the root `pnpm-workspace.yaml` (without it, `pnpm install` inside `contracts/` installs nothing and `forge test` cannot find OpenZeppelin). `pnpm --filter @gaitway/chain chain:dev` needs the root `pnpm-workspace.yaml`, which Core
    owns. On `ws1-vault` alone, run `pnpm chain:dev` inside `packages/chain`. Core's workspace file
    must list `packages/*` (and `contracts` if you want its install to run from the root).
 3. **`packages/chain` tests need the Foundry artifacts** in `contracts/out`; `pretest` runs
