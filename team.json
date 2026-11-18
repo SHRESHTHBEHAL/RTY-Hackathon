@@ -1,9 +1,11 @@
 {
-  "team_name": "CHANGE_ME",
-  "project_title": "CHANGE_ME",
-  "one_liner": "CHANGE_ME: one sentence about what you're building",
-  "track": "CHANGE_ME: physical-world | ai-agents | area-of-expertise",
+  "team_name": "darWIN",
+  "project_title": "GAITKEEP",
+  "one_liner": "GAITKEEP is a gatekeeper between AI agents and money: the agent can only ask to pay, and deterministic code it cannot talk its way past decides whether the payment goes through.",
+  "track": "ai-agents",
   "members": [
-    { "name": "CHANGE_ME", "github": "CHANGE_ME" }
+    { "name": "Shreshth Behal", "github": "SHRESHTHBEHAL" },
+    { "name": "Ronit Pahuja", "github": "ronitpahuja08" },
+    { "name": "Aadhar Gupta", "github": "Aadhar-Gupta-0" }
   ]
 }
