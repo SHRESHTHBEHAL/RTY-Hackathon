@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Code2, LayoutGrid, Package, ReceiptText } from "lucide-react";
+import { Banknote, Code2, LayoutGrid, Package, ReceiptText, Repeat } from "lucide-react";
 import type { ReactNode } from "react";
 import { Shell, type NavItem, type ShellAccount } from "./Shell";
 
@@ -9,6 +9,7 @@ export const SELLER_NAV: NavItem[] = [
   { href: "/seller/services", label: "Services", icon: Package },
   { href: "/seller/charges", label: "Charges", icon: ReceiptText },
   { href: "/seller/payouts", label: "Payouts", icon: Banknote },
+  { href: "/seller/subscriptions", label: "Subscriptions", icon: Repeat },
   { href: "/seller/developers", label: "Developers", icon: Code2 },
 ];
 
