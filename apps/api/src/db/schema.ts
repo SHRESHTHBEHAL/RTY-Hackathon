@@ -246,6 +246,34 @@ export const SCHEMA: string[] = [
   )`,
   `create index if not exists charges_mandate_idx on charges (mandate_id, created_at)`,
 
+  // --- Refunds (Task 13) ---
+  `create table if not exists refunds (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    charge_id text not null,
+    seller_id text not null,
+    business_id text not null,
+    wallet_id text not null,
+    amount_micros bigint not null check (amount_micros > 0),
+    fee_share_micros bigint not null default 0,
+    batch_id text,
+    settled_at timestamptz,
+    created_at timestamptz not null default now()
+  )`,
+
+  // --- Withdrawals (Task 14) ---
+  `create table if not exists withdrawals (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    business_id text not null,
+    amount_micros bigint not null check (amount_micros > 0),
+    status text not null check (status in ('pending','sent')),
+    tx_hash text,
+    created_at timestamptz not null default now()
+  )`,
+
   // --- Webhooks (Task 15) ---
   `create table if not exists webhook_endpoints (
     seller_id text primary key,

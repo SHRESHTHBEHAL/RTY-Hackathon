@@ -14,6 +14,8 @@ import { registerSellerRoutes } from "./routes/seller.js";
 import { registerPayoutRoutes } from "./routes/payouts.js";
 import { registerRuleRoutes } from "./routes/rules.js";
 import { registerMandateRoutes } from "./routes/mandates.js";
+import { registerTransferRoutes } from "./routes/transfers.js";
+import { registerRefundRoutes } from "./routes/refunds.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -53,6 +55,8 @@ export function buildApp(deps: Deps): App {
   registerPayoutRoutes(app, deps);
   registerRuleRoutes(app, deps);
   registerMandateRoutes(app, deps);
+  registerTransferRoutes(app, deps);
+  registerRefundRoutes(app, deps);
 
   return app;
 }

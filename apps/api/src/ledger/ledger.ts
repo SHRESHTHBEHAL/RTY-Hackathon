@@ -15,6 +15,15 @@ export type PostingMeta = {
   amountMicros?: bigint | null;
 };
 
+/** insufficient_funds, remembering which ledger account would have gone negative. */
+export class InsufficientFunds extends ApiError {
+  readonly accountKind: Kind;
+  constructor(kind: Kind) {
+    super("insufficient_funds", insufficientMessage(kind));
+    this.accountKind = kind;
+  }
+}
+
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
@@ -65,7 +74,7 @@ export async function post(
     const row = byKey.get(`${e.kind}:${e.ownerId}`)!;
     const next = row.balance_micros + e.delta;
     if (e.kind !== "external" && next < 0n) {
-      throw new ApiError("insufficient_funds", insufficientMessage(e.kind));
+      throw new InsufficientFunds(e.kind);
     }
   }
 

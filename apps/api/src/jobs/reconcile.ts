@@ -40,6 +40,9 @@ export async function runReconcile(deps: Deps, env: Env = "test"): Promise<Recon
       + coalesce((select sum(la.balance_micros) from ledger_accounts la join wallets w on w.id = la.owner_id
                   where la.env = ${env} and la.kind in ('available','held') and w.business_id = b.id), 0)
       + coalesce((select sum(c.amount_micros) from charges c where c.env = ${env} and c.business_id = b.id and c.settled_at is null), 0)
+      - coalesce((select sum(r.amount_micros) from refunds r where r.env = ${env} and r.business_id = b.id and r.settled_at is null), 0)
+      + coalesce((select sum(la.balance_micros) from ledger_accounts la join withdrawals wd on wd.id = la.owner_id
+                  where la.env = ${env} and la.kind = 'withdrawing' and wd.business_id = b.id), 0)
       as total
     from businesses b where b.env = ${env}`;
   const ledgerBy = new Map(ledger.map((r) => [r.business_id, BigInt(r.total)]));
