@@ -45,6 +45,7 @@ export function testConfig(over: Partial<Config> = {}): Config {
       PLATFORM_FEE_BPS: "0",
       LIVE_ENABLED: "false",
       VAULT_DRIVER: "memory",
+      RATE_LIMIT_PER_10S: "1000000",
     }),
     ...over,
   };

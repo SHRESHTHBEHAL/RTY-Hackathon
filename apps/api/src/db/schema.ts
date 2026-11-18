@@ -274,6 +274,11 @@ export const SCHEMA: string[] = [
     created_at timestamptz not null default now()
   )`,
 
+  // --- Ramp and identity slots (Task 17) ---
+  `alter table topups add column if not exists provider_ref text`,
+  `alter table businesses add column if not exists verifier text`,
+  `alter table businesses add column if not exists verification_id text`,
+
   // --- Policy hook (Task 16) ---
   `create table if not exists policy_hooks (
     business_id text primary key,

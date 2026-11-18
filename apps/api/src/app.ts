@@ -21,6 +21,7 @@ import { registerDirectoryRoutes } from "./routes/directory.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
 import { registerPolicyHookRoutes } from "./routes/policy-hook.js";
 import { checkPolicyHook } from "./rules/hook.js";
+import { registerVerificationRoutes } from "./routes/ramp.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -67,6 +68,7 @@ export function buildApp(deps: Deps): App {
   registerDirectoryRoutes(app, deps);
   registerWebhookRoutes(app, deps);
   registerPolicyHookRoutes(app, deps);
+  registerVerificationRoutes(app, deps);
 
   return app;
 }

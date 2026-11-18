@@ -6,6 +6,8 @@ import { migrate } from "./db/migrate.js";
 import { newState, type Deps } from "./deps.js";
 import { getVault } from "./vault/index.js";
 import { startJobs } from "./jobs/runner.js";
+import { createSimulatedRamp } from "./ramp/simulated.js";
+import { createSimulatedIdentity } from "./identity/simulated.js";
 
 try {
   process.loadEnvFile();
@@ -16,7 +18,17 @@ try {
 const config = loadConfig();
 const sql = createSql(config.databaseUrl, { max: 20 });
 await migrate(sql);
-const deps: Deps = { sql, config, vault: getVault(config), now: () => new Date(), state: newState() };
+const vault = getVault(config);
+const deps: Deps = {
+  sql,
+  config,
+  vault,
+  now: () => new Date(),
+  state: newState(),
+  // Both providers are simulations; see README.
+  ramp: config.rampProvider === "simulated" ? createSimulatedRamp(vault) : undefined,
+  identity: config.identityProvider === "simulated" ? createSimulatedIdentity() : undefined,
+};
 const app = buildApp(deps);
 
 const jobs = startJobs(deps);

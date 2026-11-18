@@ -28,6 +28,10 @@ export type PolicyEvent = {
 export type Deps = {
   /** Calls the business's policy hook, if any (Task 16). Throws rule_violation unless it allows. */
   policyHook?: (env: "test" | "live", businessId: string, event: PolicyEvent) => Promise<void>;
+  /** Currency partner slot (simulated only for now). */
+  ramp?: import("./ramp/types.js").RampProvider;
+  /** Identity-check slot (simulated only for now). */
+  identity?: import("./identity/types.js").IdentityProvider;
   /** Outbound HTTP for the policy hook; defaults to global fetch. */
   fetch?: typeof fetch;
   sql: Db;

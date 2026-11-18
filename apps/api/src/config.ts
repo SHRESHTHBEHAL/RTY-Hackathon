@@ -21,6 +21,9 @@ const schema = z.object({
   ADMIN_PRIVATE_KEY: z.string().optional(),
   TEST_ADDRESS_MNEMONIC: z.string().optional(),
   CONFIRMATIONS: z.coerce.number().int().min(0).default(1),
+  RAMP_PROVIDER: z.enum(["none", "simulated"]).default("none"),
+  IDENTITY_PROVIDER: z.enum(["none", "simulated"]).default("none"),
+  RATE_LIMIT_PER_10S: z.coerce.number().int().positive().default(100),
 });
 
 export type Config = {
@@ -39,6 +42,10 @@ export type Config = {
   adminPrivateKey?: string;
   testAddressMnemonic?: string;
   confirmations: number;
+  rampProvider: "none" | "simulated";
+  identityProvider: "none" | "simulated";
+  /** Requests allowed per API key or session in any 10-second window. */
+  rateLimitPer10s: number;
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -64,5 +71,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminPrivateKey: s.ADMIN_PRIVATE_KEY,
     testAddressMnemonic: s.TEST_ADDRESS_MNEMONIC,
     confirmations: s.CONFIRMATIONS,
+    rampProvider: s.RAMP_PROVIDER,
+    identityProvider: s.IDENTITY_PROVIDER,
+    rateLimitPer10s: s.RATE_LIMIT_PER_10S,
   };
 }

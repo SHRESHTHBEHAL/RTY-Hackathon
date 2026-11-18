@@ -63,7 +63,21 @@ export function registerFundsRoutes(app: App, deps: Deps) {
   app.post("/v1/topups", biz, async (c) => {
     const p = c.get("principal");
     const body = await readJson(c, TopupBody);
-    if (body.method === "ramp") throw new ApiError("validation_failed", "method \"ramp\" is not available yet", { field: "method" });
+    if (body.method === "ramp") {
+      if (!deps.ramp) throw new ApiError("validation_failed", "method \"ramp\" is not available: no currency partner is configured", { field: "method" });
+      const id = newId("top");
+      const [row] = await sql<TopupRow[]>`
+        insert into topups (id, env, business_id, amount_micros, method, status)
+        values (${id}, ${p.env}, ${p.businessId!}, ${body.amountMicros}, 'ramp', 'pending') returning *`;
+      try {
+        const r = await deps.ramp.createTopup(p.businessId!, body.amountMicros);
+        await sql`update topups set provider_ref = ${r.providerRef} where id = ${id}`;
+      } catch (e) {
+        await sql`update topups set status = 'failed' where id = ${id}`;
+        throw e;
+      }
+      return c.json({ topup: topupJson(row!) });
+    }
     if (p.env !== "test") throw new ApiError("validation_failed", "method \"test\" is only allowed in the test environment");
     const id = newId("top");
     const [row] = await sql<TopupRow[]>`

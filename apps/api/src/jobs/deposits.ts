@@ -40,7 +40,7 @@ export async function runDepositJob(deps: Deps): Promise<number> {
       }
       const [pending] = await tx<{ id: string }[]>`
         select id from topups
-        where env = ${biz.env} and business_id = ${biz.id} and status = 'pending' and method = 'test' and amount_micros = ${ev.amountMicros}
+        where env = ${biz.env} and business_id = ${biz.id} and status = 'pending' and amount_micros = ${ev.amountMicros}
         order by seq asc limit 1 for update skip locked`;
       let topupId: string;
       if (pending) {
