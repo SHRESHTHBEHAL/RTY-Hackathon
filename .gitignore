@@ -1,3 +1,31 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Build output
+dist/
+build/
+.next/
+out/
+target/
+coverage/
+
+# Environment & secrets: never commit API keys
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Gaitway
 node_modules/
 dist/
 .next/
@@ -10,3 +38,7 @@ broadcast/
 .DS_Store
 test-results/
 playwright-report/
+.next-*/
+.claude/
+SPRINT.md
+sprint-prompts/

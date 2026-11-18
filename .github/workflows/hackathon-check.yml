@@ -1,0 +1,35 @@
+name: Hackathon check
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  check:
+    # Skip on the organizers' starter repo itself; run only in team forks.
+    if: github.event.repository.fork == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate team.json
+        run: python3 .github/scripts/check_team.py
+
+      - name: Genesis commit still in history
+        env:
+          GENESIS_SHA: 2057b2e3397d4954a39ec282d30d66f97ca953db
+        run: |
+          if [ "$GENESIS_SHA" = "GENESIS_SHA_PLACEHOLDER" ]; then echo "Genesis SHA not configured, skipping."; exit 0; fi
+          if git merge-base --is-ancestor "$GENESIS_SHA" HEAD; then
+            echo "✅ History intact"
+          else
+            echo "::error::The genesis commit is missing from your history. Did you force-push or rebase? Ask an organizer."
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo "### Hackathon check ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commits on this branch: $(git rev-list --count HEAD)" >> "$GITHUB_STEP_SUMMARY"

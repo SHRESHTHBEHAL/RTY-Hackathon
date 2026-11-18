@@ -1,0 +1,37 @@
+name: Validate submission
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  validate:
+    # Only in the organizers' starter repo, and only for submission issues.
+    if: github.event.repository.fork == false && contains(github.event.issue.labels.*.name, 'submission')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        env:
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_CREATED: ${{ github.event.issue.created_at }}
+        run: python3 .github/scripts/validate_submission.py
+      - name: Label and comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+        run: |
+          if [ "${{ steps.check.outputs.status }}" = "valid" ]; then
+            gh issue edit "$N" -R "$GITHUB_REPOSITORY" --add-label valid --remove-label needs-fix || true
+          else
+            gh issue edit "$N" -R "$GITHUB_REPOSITORY" --add-label needs-fix --remove-label valid || true
+          fi
+          if [ "${{ steps.check.outputs.late }}" = "true" ]; then gh issue edit "$N" -R "$GITHUB_REPOSITORY" --add-label late || true; fi
+          gh issue comment "$N" -R "$GITHUB_REPOSITORY" --body-file result.md --edit-last --create-if-none \
+            || gh issue comment "$N" -R "$GITHUB_REPOSITORY" --body-file result.md

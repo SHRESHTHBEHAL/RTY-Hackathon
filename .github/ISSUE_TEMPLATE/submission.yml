@@ -1,0 +1,83 @@
+name: 🏁 Buildathon submission
+description: Submit your team's fork. One submission per team. Deadline 7:00 PM IST, 18 Nov 2026.
+title: "[Submission] <your team name>"
+labels: ["submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Buildathon project submission
+        Submit **once per team**, as soon as your fork is registered (`team.json` committed). You can keep pushing code until **7:00 PM IST**, and judges look at your last commit before then.
+        Need to change something? **Edit this issue.** Don't open a new one.
+        After you submit, a bot checks your fork and comments ✅ or tells you what to fix.
+  - type: input
+    id: team_name
+    attributes:
+      label: Team name
+      placeholder: Byte Bandits
+    validations:
+      required: true
+  - type: input
+    id: fork_url
+    attributes:
+      label: Fork URL
+      description: The URL of your team's fork of this repo
+      placeholder: https://github.com/your-username/buildathon-byte-bandits
+    validations:
+      required: true
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track
+      options:
+        - 01 · Build for the Physical World (physical-world)
+        - 02 · Build for AI Agents (ai-agents)
+        - 03 · Build in Your Area of Expertise (area-of-expertise)
+    validations:
+      required: true
+  - type: input
+    id: project_title
+    attributes:
+      label: Project title
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who faces this problem, and why does it happen? (2–3 sentences)
+    validations:
+      required: true
+  - type: textarea
+    id: what_we_built
+    attributes:
+      label: What you built and the hardest part
+      description: The core workflow, and how you solved the hardest part of the build
+    validations:
+      required: true
+  - type: textarea
+    id: members
+    attributes:
+      label: Team members
+      description: One per line, as `Full Name, @github-username`
+      placeholder: |
+        Asha Rao, @asharao
+        Dev Mehta, @devm
+    validations:
+      required: true
+  - type: input
+    id: demo_link
+    attributes:
+      label: Demo link (optional)
+      description: A deployed app, video (Loom/YouTube/Drive), or slides
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: Our repo is a public GitHub fork of this starter repo
+          required: true
+        - label: All project code was written during the Buildathon (3:00–7:00 PM IST)
+          required: true
+        - label: We haven't force-pushed or rewritten our git history
+          required: true

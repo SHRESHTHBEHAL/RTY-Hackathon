@@ -1,0 +1,11 @@
+{
+  "team_name": "darWIN",
+  "project_title": "GAITKEEP",
+  "one_liner": "GAITKEEP is a gatekeeper between AI agents and money: the agent can only ask to pay, and deterministic code it cannot talk its way past decides whether the payment goes through.",
+  "track": "ai-agents",
+  "members": [
+    { "name": "Shreshth Behal", "github": "SHRESHTHBEHAL" },
+    { "name": "Ronit Pahuja", "github": "ronitpahuja08" },
+    { "name": "Aadhar Gupta", "github": "Aadhar-Gupta-0" }
+  ]
+}

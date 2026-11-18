@@ -1,0 +1,41 @@
+{
+  "name": "@gaitway/chain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript client for the Gaitway vault contract (VaultClient).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "contracts:build": "forge build --root ../../contracts",
+    "pretest": "pnpm run contracts:build",
+    "test": "vitest run",
+    "chain:dev": "tsx scripts/dev.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "0.23.1"
+    }
+  },
+  "dependencies": {
+    "viem": "2.21.54"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2",
+    "vitest": "2.1.8"
+  }
+}
