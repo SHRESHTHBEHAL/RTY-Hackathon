@@ -6,3 +6,5 @@ export { GaitwaySeller } from "./seller.js";
 export type {
   CredentialClaims, GaitwaySellerOptions, ChargeInput, ChargeResult, PaymentRequired,
 } from "./seller.js";
+export { GaitwayAgent } from "./agent.js";
+export type { GaitwayAgentOptions, CreateCredentialInput, AgentFetchOptions } from "./agent.js";
