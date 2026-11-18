@@ -229,6 +229,42 @@ export const SCHEMA: string[] = [
   )`,
   `create index if not exists charges_agent_day_idx on charges (agent_id, created_at)`,
 
+  // --- Mandates (Task 12) ---
+  `create table if not exists mandates (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    wallet_id text not null,
+    agent_id text not null,
+    business_id text not null,
+    seller_id text not null,
+    max_per_period bigint not null,
+    period text not null check (period in ('day','week','month')),
+    status text not null check (status in ('active','revoked')),
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+  )`,
+  `create index if not exists charges_mandate_idx on charges (mandate_id, created_at)`,
+
+  // --- Webhooks (Task 15) ---
+  `create table if not exists webhook_endpoints (
+    seller_id text primary key,
+    url text not null,
+    secret text not null,
+    updated_at timestamptz not null default now()
+  )`,
+  `create table if not exists webhook_events (
+    id text primary key,
+    seller_id text not null,
+    type text not null,
+    payload text not null,
+    status text not null check (status in ('pending','delivered','failed')),
+    attempts integer not null default 0,
+    next_attempt_at timestamptz not null,
+    created_at timestamptz not null default now()
+  )`,
+  `create index if not exists webhook_due_idx on webhook_events (next_attempt_at) where status = 'pending'`,
+
   // --- Seller services (Task 8) ---
   `create table if not exists services (
     id text primary key,

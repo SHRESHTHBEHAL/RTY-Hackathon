@@ -13,6 +13,7 @@ import { registerChargeRoutes } from "./routes/charges.js";
 import { registerSellerRoutes } from "./routes/seller.js";
 import { registerPayoutRoutes } from "./routes/payouts.js";
 import { registerRuleRoutes } from "./routes/rules.js";
+import { registerMandateRoutes } from "./routes/mandates.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -51,6 +52,7 @@ export function buildApp(deps: Deps): App {
   registerSellerRoutes(app, deps);
   registerPayoutRoutes(app, deps);
   registerRuleRoutes(app, deps);
+  registerMandateRoutes(app, deps);
 
   return app;
 }
