@@ -9,7 +9,9 @@ export const DEPOSIT_CURSOR = "deposits";
 /** Highest block whose deposits have been credited (-1 if none scanned yet). */
 export async function lastCreditedBlock(deps: Deps): Promise<bigint> {
   const [row] = await deps.sql<{ last_block: bigint }[]>`select last_block from chain_cursor where name = ${DEPOSIT_CURSOR}`;
-  return row?.last_block ?? -1n;
+  const start = deps.config.vaultDeployBlock - 1n;
+  const last = row?.last_block ?? -1n;
+  return last > start ? last : start;
 }
 
 /**

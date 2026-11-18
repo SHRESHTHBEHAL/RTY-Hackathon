@@ -18,7 +18,7 @@ try {
 const config = loadConfig();
 const sql = createSql(config.databaseUrl, { max: 20 });
 await migrate(sql);
-const vault = getVault(config);
+const vault = await getVault(config);
 const deps: Deps = {
   sql,
   config,

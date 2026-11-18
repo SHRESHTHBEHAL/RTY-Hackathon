@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { Deps } from "./deps.js";
 import { logOf } from "./deps.js";
 import { ApiError } from "./errors.js";
@@ -41,6 +42,19 @@ export function buildApp(deps: Deps): App {
     return c.json({ error: { code: "internal", message: "Internal error" } }, 500);
   });
   app.notFound((c) => c.json({ error: { code: "not_found", message: "No such route" } }, 404));
+
+  // The dashboard and demo call the API from the browser. Auth is a bearer token, not a cookie.
+  const origins = deps.config.corsOrigins.trim();
+  app.use(
+    "*",
+    cors({
+      origin: origins === "*" ? "*" : origins.split(",").map((o) => o.trim()),
+      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowHeaders: ["authorization", "content-type", "idempotency-key", "gaitway-request-id"],
+      exposeHeaders: ["retry-after"],
+      maxAge: 600,
+    }),
+  );
 
   // Live keys are refused unless LIVE_ENABLED=true (context.md section 6).
   app.use("*", async (c, next) => {

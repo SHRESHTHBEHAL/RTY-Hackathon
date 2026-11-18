@@ -55,10 +55,19 @@ export async function runReconcile(deps: Deps, env: Env = "test"): Promise<Recon
       differences.push({ businessId: b.id, vaultMicros: vaultMicros.toString(), ledgerMicros: ledgerMicros.toString() });
     }
   }
-  if (differences.length > 0) {
+  // A vault holding MORE than the ledger is a deposit not yet credited (the chain client never reports
+  // deposits above the confirmed block). Only a shortfall pauses settlement, and not while a settlement
+  // batch or withdrawal is between its vault call and its database update.
+  const shortfall = differences.some((d) => BigInt(d.vaultMicros) < BigInt(d.ledgerMicros));
+  const [busy] = await sql`
+    select 1 from settlement_batches where env = ${env} and status in ('pending','submitted')
+    union all select 1 from withdrawals where env = ${env} and status = 'pending' limit 1`;
+  if (shortfall && !busy) {
     deps.state.settlementPaused = true;
     deps.state.pauseReason = "reconciliation found a difference";
-    logOf(deps)("reconciliation difference; settlement paused", { differences });
+    logOf(deps)("reconciliation shortfall; settlement paused", { differences });
+  } else if (differences.length > 0) {
+    logOf(deps)("reconciliation difference (not pausing)", { differences, shortfall, inFlight: Boolean(busy) });
   }
   return { ok: differences.length === 0, differences };
 }

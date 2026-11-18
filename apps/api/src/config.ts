@@ -24,6 +24,8 @@ const schema = z.object({
   RAMP_PROVIDER: z.enum(["none", "simulated"]).default("none"),
   IDENTITY_PROVIDER: z.enum(["none", "simulated"]).default("none"),
   RATE_LIMIT_PER_10S: z.coerce.number().int().positive().default(100),
+  CORS_ORIGINS: z.string().default("*"),
+  VAULT_DEPLOY_BLOCK: z.coerce.bigint().default(0n),
 });
 
 export type Config = {
@@ -46,6 +48,10 @@ export type Config = {
   identityProvider: "none" | "simulated";
   /** Requests allowed per API key or session in any 10-second window. */
   rateLimitPer10s: number;
+  /** "*" or a comma-separated list of browser origins allowed to call the API. */
+  corsOrigins: string;
+  /** First block to scan for vault deposits (deployBlock from the deployment file). */
+  vaultDeployBlock: bigint;
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -74,5 +80,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     rampProvider: s.RAMP_PROVIDER,
     identityProvider: s.IDENTITY_PROVIDER,
     rateLimitPer10s: s.RATE_LIMIT_PER_10S,
+    corsOrigins: s.CORS_ORIGINS,
+    vaultDeployBlock: s.VAULT_DEPLOY_BLOCK,
   };
 }
