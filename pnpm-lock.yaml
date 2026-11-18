@@ -116,6 +116,15 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.5)(lightningcss@1.33.0)
 
+  contracts:
+    devDependencies:
+      '@openzeppelin/contracts':
+        specifier: 5.1.0
+        version: 5.1.0
+      forge-std:
+        specifier: github:foundry-rs/forge-std#v1.9.4
+        version: https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262
+
   packages/chain:
     dependencies:
       viem:
@@ -880,6 +889,9 @@ packages:
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
 
+  '@openzeppelin/contracts@5.1.0':
+    resolution: {integrity: sha512-p1ULhl7BXzjjbha5aqst+QMLY+4/LCWADXOCsmLHRM77AqiPjnd9vvUN9sosUfhL9JGKpZ0TjEGxgvnizmWGSA==}
+
   '@playwright/test@1.65.1':
     resolution: {integrity: sha512-y+NCIRm2LvY4slUVWvGh1nujJ8RF/hEisIsq2mtUPgdQC4L701bq5hZGMhrpeXjACvwvO9tj5dJqhvM6TP9lbw==}
     engines: {node: '>=20'}
@@ -1470,6 +1482,10 @@ packages:
   finalhandler@2.1.1:
     resolution: {integrity: sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==}
     engines: {node: '>= 18.0.0'}
+
+  forge-std@https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262:
+    resolution: {tarball: https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262}
+    version: 1.9.4
 
   forwarded@0.2.0:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
@@ -2618,6 +2634,8 @@ snapshots:
 
   '@noble/hashes@1.8.0': {}
 
+  '@openzeppelin/contracts@5.1.0': {}
+
   '@playwright/test@1.65.1':
     dependencies:
       playwright: 1.65.1
@@ -3254,6 +3272,8 @@ snapshots:
       statuses: 2.0.2
     transitivePeerDependencies:
       - supports-color
+
+  forge-std@https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262: {}
 
   forwarded@0.2.0: {}
 
