@@ -87,4 +87,13 @@ export function registerSellerRoutes(app: App, deps: Deps) {
     const [s] = await sql<{ payout_address: string | null }[]>`select payout_address from sellers where id = ${p.sellerId!}`;
     return c.json({ address: s?.payout_address ?? null });
   });
+
+  // M2: re-registers the seller on the vault with the new address, then stores it.
+  app.put("/v1/payout-address", seller, async (c) => {
+    const p = c.get("principal");
+    const b = await readJson(c, z.object({ address: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "address must be a 0x-prefixed 20-byte hex address") }));
+    const r = await deps.vault.registerSeller(p.sellerId!, b.address as `0x${string}`);
+    await sql`update sellers set payout_address = ${r.payoutAddress} where id = ${p.sellerId!}`;
+    return c.json({ address: r.payoutAddress });
+  });
 }

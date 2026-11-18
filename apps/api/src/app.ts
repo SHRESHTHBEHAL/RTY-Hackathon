@@ -22,6 +22,8 @@ import { registerWebhookRoutes } from "./routes/webhook.js";
 import { registerPolicyHookRoutes } from "./routes/policy-hook.js";
 import { checkPolicyHook } from "./rules/hook.js";
 import { registerVerificationRoutes } from "./routes/ramp.js";
+import { rateLimit } from "./middleware/rate-limit.js";
+import { registerOpenApi } from "./openapi.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -49,7 +51,10 @@ export function buildApp(deps: Deps): App {
     await next();
   });
 
+  app.use("*", rateLimit(deps));
+
   app.get("/health", (c) => c.json({ ok: true }));
+  registerOpenApi(app, deps);
 
   registerAccountRoutes(app, deps);
   registerKeyRoutes(app, deps);

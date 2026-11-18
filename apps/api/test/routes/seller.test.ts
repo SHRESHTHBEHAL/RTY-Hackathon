@@ -36,5 +36,9 @@ describe("seller services and payout address", () => {
     const [row] = await ctx.sql`select payout_address from sellers where id = ${s.account.sellerId}`;
     expect(addr.body).toEqual({ address: row!.payout_address });
     expect((await ctx.call("GET", "/v1/payout-address", { token: b.apiKey })).status).toBe(403);
+    const newAddr = "0x" + "ab".repeat(20);
+    expect((await ctx.call("PUT", "/v1/payout-address", { token: s.apiKey, body: { address: "nope" } })).status).toBe(422);
+    expect((await ctx.call("PUT", "/v1/payout-address", { token: s.apiKey, body: { address: newAddr } })).body).toEqual({ address: newAddr });
+    expect((await ctx.call("GET", "/v1/payout-address", { token: s.apiKey })).body).toEqual({ address: newAddr });
   });
 });

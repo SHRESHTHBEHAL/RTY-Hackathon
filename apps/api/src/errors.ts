@@ -11,6 +11,7 @@ export const ERROR_STATUS = {
   rule_violation: 403,
   insufficient_seller_balance: 409,
   live_disabled: 403,
+  rate_limited: 429,
   internal: 500,
 } as const;
 
@@ -29,6 +30,7 @@ const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
   rule_violation: "A spending rule blocked this request",
   insufficient_seller_balance: "Refund is larger than the seller's unsettled balance",
   live_disabled: "Live mode is not enabled",
+  rate_limited: "Too many requests; slow down",
   internal: "Internal error",
 };
 
