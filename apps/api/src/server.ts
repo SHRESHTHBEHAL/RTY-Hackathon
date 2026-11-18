@@ -5,6 +5,7 @@ import { createSql } from "./db/client.js";
 import { migrate } from "./db/migrate.js";
 import { newState, type Deps } from "./deps.js";
 import { getVault } from "./vault/index.js";
+import { startJobs } from "./jobs/runner.js";
 
 try {
   process.loadEnvFile();
@@ -18,7 +19,7 @@ await migrate(sql);
 const deps: Deps = { sql, config, vault: getVault(config), now: () => new Date(), state: newState() };
 const app = buildApp(deps);
 
-const jobs = await import("./jobs/runner.js").then((m) => m.startJobs(deps)).catch(() => null);
+const jobs = startJobs(deps);
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`gaitway api listening on http://localhost:${info.port} (vault: ${config.vaultDriver})`);

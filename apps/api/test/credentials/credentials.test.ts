@@ -126,7 +126,7 @@ describe("credentials", () => {
     const ctx = await setup();
     const a = await ctx.call("GET", "/.well-known/jwks.json");
     const app2 = buildApp({ ...ctx.deps });
-    const b = await (await app2.request("/.well-known/jwks.json")).json();
+    const b = (await (await app2.request("/.well-known/jwks.json")).json()) as any;
     expect(a.body.keys[0].kid).toBe(b.keys[0].kid);
     expect(a.body.keys[0].d).toBeUndefined();
   });

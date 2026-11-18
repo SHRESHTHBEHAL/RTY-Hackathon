@@ -28,7 +28,7 @@ describe("app basics", () => {
     });
     const a = await app.request("/__t/funds");
     expect(a.status).toBe(402);
-    expect((await a.json()).error.code).toBe("insufficient_funds");
+    expect(((await a.json()) as any).error.code).toBe("insufficient_funds");
     const b = await app.request("/__t/boom");
     expect(b.status).toBe(500);
     const text = await b.text();

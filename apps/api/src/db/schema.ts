@@ -195,6 +195,29 @@ export const SCHEMA: string[] = [
     unique (batch_id, seller_id)
   )`,
 
+  // --- Settlement (Task 9) ---
+  `create table if not exists settlement_batches (
+    id text primary key,
+    env text not null,
+    status text not null check (status in ('pending','submitted','confirmed','failed')),
+    gross_micros bigint not null,
+    fee_micros bigint not null,
+    tx_hash text,
+    error text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+  )`,
+  // Only one batch per environment may be in flight at a time.
+  `create unique index if not exists settlement_one_open_idx on settlement_batches (env) where status in ('pending','submitted')`,
+  `create table if not exists settlement_items (
+    batch_id text not null references settlement_batches(id),
+    business_id text not null,
+    seller_id text not null,
+    gross_micros bigint not null,
+    fee_micros bigint not null,
+    primary key (batch_id, business_id, seller_id)
+  )`,
+
   // --- Seller services (Task 8) ---
   `create table if not exists services (
     id text primary key,

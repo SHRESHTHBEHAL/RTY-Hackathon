@@ -11,6 +11,7 @@ import { registerJwks } from "./credentials/jwks.js";
 import { registerCredentialRoutes } from "./routes/credentials.js";
 import { registerChargeRoutes } from "./routes/charges.js";
 import { registerSellerRoutes } from "./routes/seller.js";
+import { registerPayoutRoutes } from "./routes/payouts.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -47,6 +48,7 @@ export function buildApp(deps: Deps): App {
   registerCredentialRoutes(app, deps);
   registerChargeRoutes(app, deps);
   registerSellerRoutes(app, deps);
+  registerPayoutRoutes(app, deps);
 
   return app;
 }

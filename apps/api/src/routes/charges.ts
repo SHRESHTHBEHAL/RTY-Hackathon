@@ -119,9 +119,10 @@ export function registerChargeRoutes(app: App, deps: Deps) {
   app.get("/v1/seller/balance", seller, async (c) => {
     const p = c.get("principal");
     const owed = await balanceOf(sql, p.env, "owed", p.sellerId!);
-    const [{ paid }] = (await sql<{ paid: bigint }[]>`
+    const [row] = await sql<{ paid: bigint }[]>`
       select coalesce(sum(amount_micros), 0)::bigint as paid from payouts
-      where env = ${p.env} and seller_id = ${p.sellerId!} and status = 'sent'`) as [{ paid: bigint }];
+      where env = ${p.env} and seller_id = ${p.sellerId!} and status = 'sent'`;
+    const paid = row?.paid ?? 0n;
     return c.json({ owedMicros: owed.toString(), paidOutMicros: paid.toString() });
   });
 }
