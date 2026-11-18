@@ -4,11 +4,17 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { randomBytes } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import { exportJWK, generateKeyPair, SignJWT, type JWK, type KeyLike } from "jose";
-import type { Charge, Credential, Wallet } from "../types.js";
+import type { Charge, Credential, Mandate, Refund, Rules, Seller, Service, Wallet } from "../types.js";
 
 export type MockBusiness = { id: string; name: string; email: string; apiKey: string };
 export type MockAgent = { id: string; name: string; businessId: string; walletId: string; apiKey: string };
 export type MockSeller = { id: string; name: string; apiKey: string };
+/** What the business's policy hook answers (context.md section 8). `null` means no hook is set. */
+export type MockPolicyOutcome = {
+  outcome: "allow" | "hold" | "block";
+  reasons: string[];
+  approvalLink: string | null;
+};
 
 export interface MockGaitway {
   /** Base URL of the mock, also its credential issuer (`iss`). */
@@ -30,12 +36,43 @@ export interface MockGaitway {
   setAgentStatus(agentId: string, status: "active" | "disabled"): void;
   /** Sign arbitrary claims with the mock's key (for negative tests). Header typ defaults to the credential typ. */
   signToken(claims: Record<string, unknown>, header?: { typ?: string; kid?: string }): Promise<string>;
+
+  // ---- M2 ----
+  /** Add a service to a seller's public directory entry. */
+  addService(sellerId: string, service?: Partial<Omit<Service, "id" | "sellerId">>): Service;
+  /** Set an agent's spending rules; omitted fields are null. `null` clears every rule. */
+  setRules(agentId: string, rules: Partial<Rules> | null): Rules;
+  /**
+   * Simulate the business's policy hook. Anything other than `allow` makes credential, mandate,
+   * and transfer creation fail with `rule_violation` and `details: { outcome, approvalLink }`.
+   * `null` removes the hook.
+   */
+  setPolicyOutcome(businessId: string, outcome: MockPolicyOutcome | null): void;
+  mandate(id: string): Mandate;
+  /** Revoke a mandate, as the business route `DELETE /v1/mandates/:id` would. */
+  revokeMandate(id: string): Mandate;
+  /** Pay out everything a seller is owed (owed becomes paid out), as a settlement would. */
+  settleSeller(sellerId: string): void;
 }
 
 type Role = "biz" | "agt" | "sel";
 type CredRec = Credential & { env: "test"; held: bigint; remaining: bigint; max: bigint; expMs: number };
 type WalletRec = { walletId: string; agentId: string; available: bigint; held: bigint };
 type StoredResponse = { status: number; body: unknown; fingerprint: string };
+type MandateRec = Omit<Mandate, "token"> & { max: bigint; token: string };
+type ChargeRec = Charge & { atMs: number };
+
+const PERIODS = new Set(["day", "week", "month"]);
+const DAY_MS = 86_400_000;
+
+/** Start (UTC) of the period containing `ms`. Weeks start on Monday. */
+function periodStart(period: Mandate["period"], ms: number): number {
+  const d = new Date(ms);
+  const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  if (period === "day") return day;
+  if (period === "week") return day - ((d.getUTCDay() + 6) % 7) * DAY_MS;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+}
 
 const B36 = "0123456789abcdefghijklmnopqrstuvwxyz";
 function rand(len: number, alphabet: string): string {
@@ -70,8 +107,96 @@ export async function startMockGaitway(opts: { port?: number; feeBps?: number } 
   const sellers = new Map<string, MockSeller & { owed: bigint; paidOut: bigint }>();
   const keys = new Map<string, { role: Role; id: string }>();
   const creds = new Map<string, CredRec>();
-  const charges: Charge[] = [];
+  const charges: ChargeRec[] = [];
   const idem = new Map<string, StoredResponse>();
+  const services = new Map<string, Service[]>(); // by sellerId
+  const rules = new Map<string, Rules>(); // by agentId
+  const policy = new Map<string, MockPolicyOutcome>(); // by businessId
+  const mandates = new Map<string, MandateRec>();
+  const refunds: Refund[] = [];
+
+  const publicCharge = ({ atMs: _a, ...c }: ChargeRec): Charge => ({ ...c });
+  const publicSeller = (id: string): Seller => ({
+    id, name: sellers.get(id)!.name, services: (services.get(id) ?? []).filter((s) => s.active).map((s) => ({ ...s })),
+  });
+  const publicMandate = (m: MandateRec, withToken = false): Mandate => {
+    const { max: _m, token, ...rest } = m;
+    return withToken ? { ...rest, token } : { ...rest };
+  };
+
+  const ruleViolation = (message: string, details?: unknown) => new ApiError(403, "rule_violation", message, details);
+
+  /** The rules checked when a credential, mandate, or transfer is created (context.md section 8). */
+  function checkCreateRules(agentId: string, sellerId: string, amount: bigint | null) {
+    const r = rules.get(agentId);
+    if (!r) return;
+    if (r.allowedSellerIds && !r.allowedSellerIds.includes(sellerId)) {
+      throw ruleViolation("This seller is not on the agent's allowed list");
+    }
+    if (amount !== null && r.perPaymentMaxMicros !== null && amount > BigInt(r.perPaymentMaxMicros)) {
+      throw ruleViolation("Amount is above the agent's per-payment limit");
+    }
+  }
+
+  /** `dailyMaxMicros`, counted over the UTC day, checked whenever money moves to a seller. */
+  function checkDaily(agentId: string, amount: bigint) {
+    const max = rules.get(agentId)?.dailyMaxMicros;
+    if (max === null || max === undefined) return;
+    const from = periodStart("day", now());
+    const spent = charges
+      .filter((c) => c.agentId === agentId && c.atMs >= from)
+      .reduce((sum, c) => sum + BigInt(c.amountMicros), 0n);
+    if (spent + amount > BigInt(max)) throw ruleViolation("This payment would exceed the agent's daily limit");
+  }
+
+  /** The business's policy hook, consulted after its own rules pass. */
+  function checkPolicy(businessId: string) {
+    const p = policy.get(businessId);
+    if (!p || p.outcome === "allow") return;
+    const message = p.reasons.length ? p.reasons.join("; ") : `Refused by the business's policy (${p.outcome})`;
+    throw ruleViolation(message, { outcome: p.outcome, approvalLink: p.approvalLink });
+  }
+
+  function activeAgent(agentId: string) {
+    const agent = agents.get(agentId)!;
+    if (agent.status === "disabled") throw new ApiError(403, "forbidden", "This agent is disabled");
+    return agent;
+  }
+
+  function recordCharge(c: Omit<Charge, "id" | "createdAt" | "feeMicros" | "refundedMicros">): Charge {
+    const atMs = now();
+    const fee = (BigInt(c.amountMicros) * feeBps) / 10000n;
+    const rec: ChargeRec = {
+      id: newId("chg"), ...c, feeMicros: fee.toString(), refundedMicros: "0",
+      createdAt: new Date(atMs).toISOString(), atMs,
+    };
+    charges.push(rec);
+    return publicCharge(rec);
+  }
+
+  /** Run `fn` once per (scope, Idempotency-Key); a repeat returns the stored response. */
+  async function idempotent(
+    req: IncomingMessage, res: ServerResponse, scope: string, fingerprintOf: (body: Record<string, unknown>) => unknown,
+    fn: (body: Record<string, unknown>) => Promise<unknown> | unknown,
+  ) {
+    const idemKey = req.headers["idempotency-key"];
+    if (typeof idemKey !== "string" || !idemKey) {
+      throw new ApiError(422, "validation_failed", "Idempotency-Key header is required");
+    }
+    const body = (await readJson(req)) as Record<string, unknown>;
+    const fingerprint = JSON.stringify(fingerprintOf(body));
+    const ik = `${scope}:${idemKey}`;
+    const prior = idem.get(ik);
+    if (prior) {
+      if (prior.fingerprint !== fingerprint) {
+        throw new ApiError(409, "idempotency_conflict", "This Idempotency-Key was used with a different request");
+      }
+      return send(res, prior.status, prior.body);
+    }
+    const out = await fn(body);
+    idem.set(ik, { status: 200, body: out, fingerprint });
+    return send(res, 200, out);
+  }
 
   const addKey = (role: Role, id: string) => {
     const k = newKey(role);
@@ -189,10 +314,11 @@ export async function startMockGaitway(opts: { port?: number; feeBps?: number } 
         }
         ttl = body.ttlSeconds as number;
       }
-      const agent = agents.get(agentId)!;
-      if (agent.status === "disabled") throw new ApiError(403, "forbidden", "This agent is disabled");
+      const agent = activeAgent(agentId);
       const seller = sellers.get(sellerId);
       if (!seller) throw new ApiError(404, "not_found", "Seller not found");
+      checkCreateRules(agentId, sellerId, max);
+      checkPolicy(agent.businessId);
       const w = wallets.get(agentId)!;
       if (w.available < max) throw new ApiError(402, "insufficient_funds", "Wallet balance is too low for this credential");
       w.available -= max;
@@ -275,8 +401,8 @@ export async function startMockGaitway(opts: { port?: number; feeBps?: number } 
           remainingMicros: c.remaining.toString(),
         });
       }
+      checkDaily(c.agentId, amount);
       const w = wallets.get(c.agentId)!;
-      const fee = (amount * feeBps) / 10000n;
       c.remaining -= amount;
       c.held -= amount;
       w.held -= amount;
@@ -288,13 +414,10 @@ export async function startMockGaitway(opts: { port?: number; feeBps?: number } 
         w.available += c.held;
         c.held = 0n;
       }
-      const charge: Charge = {
-        id: newId("chg"), credentialId: c.id, mandateId: null, sellerId, agentId: c.agentId,
-        amountMicros: amount.toString(), feeMicros: fee.toString(), refundedMicros: "0",
+      const charge = recordCharge({
+        credentialId: c.id, mandateId: null, sellerId, agentId: c.agentId, amountMicros: amount.toString(),
         description: (body.description as string | null | undefined) ?? null,
-        createdAt: new Date(now()).toISOString(),
-      };
-      charges.push(charge);
+      });
       const resp = { charge, remainingMicros: c.remaining.toString() };
       idem.set(ik, { status: 200, body: resp, fingerprint });
       return send(res, 200, resp);
@@ -302,15 +425,153 @@ export async function startMockGaitway(opts: { port?: number; feeBps?: number } 
 
     if (method === "GET" && path === "/v1/payments") {
       const agentId = auth(req, "agt");
-      return send(res, 200, paginate(charges.filter((c) => c.agentId === agentId), url));
+      return send(res, 200, paginate(charges.filter((c) => c.agentId === agentId).map(publicCharge), url));
     }
     if (method === "GET" && path === "/v1/charges") {
       const sellerId = auth(req, "sel");
-      return send(res, 200, paginate(charges.filter((c) => c.sellerId === sellerId), url));
+      return send(res, 200, paginate(charges.filter((c) => c.sellerId === sellerId).map(publicCharge), url));
     }
     if (method === "GET" && path === "/v1/seller/balance") {
       const s = sellers.get(auth(req, "sel"))!;
       return send(res, 200, { owedMicros: s.owed.toString(), paidOutMicros: s.paidOut.toString() });
+    }
+
+    // ---- M2 ----
+    if (method === "GET" && path === "/v1/sellers") {
+      const q = (url.searchParams.get("query") ?? "").trim().toLowerCase();
+      const list = [...sellers.keys()].map(publicSeller).filter((s) =>
+        !q || s.name.toLowerCase().includes(q) ||
+        s.services.some((v) => `${v.name}\n${v.description}\n${v.priceNote}`.toLowerCase().includes(q)));
+      return send(res, 200, paginate(list, url));
+    }
+    m = /^\/v1\/sellers\/([^/]+)$/.exec(path);
+    if (method === "GET" && m) {
+      if (!sellers.has(m[1]!)) throw new ApiError(404, "not_found", "Seller not found");
+      return send(res, 200, { seller: publicSeller(m[1]!) });
+    }
+
+    if (method === "POST" && path === "/v1/mandates") {
+      const agentId = auth(req, "agt");
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const sellerId = str(body.sellerId, "sellerId");
+      const max = micros(body.maxPerPeriodMicros, "maxPerPeriodMicros");
+      if (typeof body.period !== "string" || !PERIODS.has(body.period)) {
+        throw new ApiError(422, "validation_failed", 'period must be "day", "week", or "month"');
+      }
+      const period = body.period as Mandate["period"];
+      const agent = activeAgent(agentId);
+      if (!sellers.has(sellerId)) throw new ApiError(404, "not_found", "Seller not found");
+      checkCreateRules(agentId, sellerId, null);
+      checkPolicy(agent.businessId);
+      const biz = businesses.get(agent.businessId)!;
+      const id = newId("mdt");
+      const iat = Math.floor(now() / 1000);
+      const token = await signToken({
+        iss: url0, sub: agentId, aud: sellerId, jti: id, iat, exp: iat + 365 * 86400, env: "test",
+        biz: { id: biz.id, name: biz.name, email: biz.email, verified: biz.verified },
+        agent: { id: agent.id, name: agent.name },
+        cur: "USD", maxPerPeriod: max.toString(), period,
+      }, { typ: "gaitway-mandate+jwt" });
+      const rec: MandateRec = {
+        id, walletId: agent.walletId, agentId, sellerId, maxPerPeriodMicros: max.toString(), period,
+        status: "active", createdAt: new Date(iat * 1000).toISOString(), max, token,
+      };
+      mandates.set(id, rec);
+      return send(res, 200, { mandate: publicMandate(rec, true) });
+    }
+
+    if (method === "POST" && path === "/v1/mandate-charges") {
+      const sellerId = auth(req, "sel");
+      return idempotent(req, res, `sel:${sellerId}:mandate-charges`,
+        (b) => [b.mandateId, b.amountMicros, b.description ?? null],
+        (body) => {
+          const mandateId = str(body.mandateId, "mandateId");
+          const amount = micros(body.amountMicros, "amountMicros");
+          if (body.description !== undefined && body.description !== null && typeof body.description !== "string") {
+            throw new ApiError(422, "validation_failed", "description must be a string");
+          }
+          const md = mandates.get(mandateId);
+          if (!md) throw new ApiError(404, "not_found", "Mandate not found");
+          if (md.sellerId !== sellerId) throw new ApiError(403, "forbidden", "This mandate names a different seller");
+          if (md.status !== "active") throw new ApiError(409, "credential_not_active", "Mandate is revoked");
+          const from = periodStart(md.period, now());
+          const used = charges
+            .filter((c) => c.mandateId === md.id && c.atMs >= from)
+            .reduce((sum, c) => sum + BigInt(c.amountMicros), 0n);
+          if (used + amount > md.max) {
+            throw new ApiError(409, "amount_exceeds_remaining", "Charge would exceed the mandate's limit for this period", {
+              remainingMicros: (md.max - used).toString(),
+            });
+          }
+          checkDaily(md.agentId, amount);
+          const w = wallets.get(md.agentId)!;
+          if (w.available < amount) throw new ApiError(402, "insufficient_funds", "Wallet balance is too low for this charge");
+          w.available -= amount;
+          sellers.get(sellerId)!.owed += amount;
+          const charge = recordCharge({
+            credentialId: null, mandateId: md.id, sellerId, agentId: md.agentId, amountMicros: amount.toString(),
+            description: (body.description as string | null | undefined) ?? null,
+          });
+          return { charge };
+        });
+    }
+
+    if (method === "POST" && path === "/v1/transfers") {
+      const agentId = auth(req, "agt");
+      return idempotent(req, res, `agt:${agentId}:transfers`,
+        (b) => [b.sellerId, b.amountMicros, b.reference ?? null],
+        (body) => {
+          const sellerId = str(body.sellerId, "sellerId");
+          const amount = micros(body.amountMicros, "amountMicros");
+          if (body.reference !== undefined && body.reference !== null && typeof body.reference !== "string") {
+            throw new ApiError(422, "validation_failed", "reference must be a string");
+          }
+          const agent = activeAgent(agentId);
+          const seller = sellers.get(sellerId);
+          if (!seller) throw new ApiError(404, "not_found", "Seller not found");
+          checkCreateRules(agentId, sellerId, amount);
+          checkDaily(agentId, amount);
+          checkPolicy(agent.businessId);
+          const w = wallets.get(agentId)!;
+          if (w.available < amount) throw new ApiError(402, "insufficient_funds", "Wallet balance is too low for this transfer");
+          w.available -= amount;
+          seller.owed += amount;
+          const charge = recordCharge({
+            credentialId: null, mandateId: null, sellerId, agentId, amountMicros: amount.toString(),
+            description: (body.reference as string | null | undefined) ?? null,
+          });
+          return { charge };
+        });
+    }
+
+    if (method === "POST" && path === "/v1/refunds") {
+      const sellerId = auth(req, "sel");
+      return idempotent(req, res, `sel:${sellerId}:refunds`,
+        (b) => [b.chargeId, b.amountMicros ?? null],
+        (body) => {
+          const chargeId = str(body.chargeId, "chargeId");
+          const c = charges.find((x) => x.id === chargeId);
+          if (!c) throw new ApiError(404, "not_found", "Charge not found");
+          if (c.sellerId !== sellerId) throw new ApiError(403, "forbidden", "This charge belongs to another seller");
+          const left = BigInt(c.amountMicros) - BigInt(c.refundedMicros);
+          const amount = body.amountMicros === undefined || body.amountMicros === null
+            ? left : micros(body.amountMicros, "amountMicros");
+          if (amount <= 0n || amount > left) {
+            throw new ApiError(409, "amount_exceeds_remaining", "Refund is larger than what is left of the charge", {
+              remainingMicros: left.toString(),
+            });
+          }
+          const seller = sellers.get(sellerId)!;
+          if (seller.owed < amount) {
+            throw new ApiError(409, "insufficient_seller_balance", "Refund is larger than the seller's unsettled balance");
+          }
+          seller.owed -= amount;
+          wallets.get(c.agentId)!.available += amount;
+          c.refundedMicros = (BigInt(c.refundedMicros) + amount).toString();
+          const refund: Refund = { id: newId("rfd"), chargeId, amountMicros: amount.toString(), createdAt: new Date(now()).toISOString() };
+          refunds.push(refund);
+          return { refund };
+        });
     }
 
     throw new ApiError(404, "not_found", `No route for ${method} ${path}`);
@@ -393,5 +654,47 @@ export async function startMockGaitway(opts: { port?: number; feeBps?: number } 
       a.status = status;
     },
     signToken,
+    addService(sellerId, o = {}) {
+      if (!sellers.has(sellerId)) throw new Error(`Unknown seller ${sellerId}`);
+      const svc: Service = {
+        id: newId("svc"), sellerId, name: o.name ?? "Service", description: o.description ?? "",
+        priceNote: o.priceNote ?? "", url: o.url ?? "https://seller.example", active: o.active ?? true,
+      };
+      services.set(sellerId, [...(services.get(sellerId) ?? []), svc]);
+      return { ...svc };
+    },
+    setRules(agentId, r) {
+      if (!agents.has(agentId)) throw new Error(`Unknown agent ${agentId}`);
+      const full: Rules = {
+        perPaymentMaxMicros: r?.perPaymentMaxMicros ?? null,
+        dailyMaxMicros: r?.dailyMaxMicros ?? null,
+        allowedSellerIds: r?.allowedSellerIds ? [...r.allowedSellerIds] : null,
+      };
+      if (r === null) rules.delete(agentId);
+      else rules.set(agentId, full);
+      return { ...full };
+    },
+    setPolicyOutcome(businessId, outcome) {
+      if (!businesses.has(businessId)) throw new Error(`Unknown business ${businessId}`);
+      if (outcome === null) policy.delete(businessId);
+      else policy.set(businessId, { ...outcome, reasons: [...outcome.reasons] });
+    },
+    mandate(id) {
+      const md = mandates.get(id);
+      if (!md) throw new Error(`Unknown mandate ${id}`);
+      return publicMandate(md);
+    },
+    revokeMandate(id) {
+      const md = mandates.get(id);
+      if (!md) throw new Error(`Unknown mandate ${id}`);
+      md.status = "revoked";
+      return publicMandate(md);
+    },
+    settleSeller(sellerId) {
+      const s = sellers.get(sellerId);
+      if (!s) throw new Error(`Unknown seller ${sellerId}`);
+      s.paidOut += s.owed;
+      s.owed = 0n;
+    },
   };
 }

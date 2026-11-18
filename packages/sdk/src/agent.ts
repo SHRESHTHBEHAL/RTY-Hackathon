@@ -1,7 +1,7 @@
 // Agent side of the SDK: pay sellers that answer HTTP 402 with a Gaitway body (context.md section 7).
 import { randomUUID } from "node:crypto";
 import { GaitwayError, HttpClient } from "./http.js";
-import type { Charge, Credential, Page, PaymentRequiredBody, Wallet } from "./types.js";
+import type { Charge, Credential, Mandate, Page, PaymentRequiredBody, Seller, Wallet } from "./types.js";
 
 export type GaitwayAgentOptions = {
   apiKey: string;
@@ -11,6 +11,10 @@ export type GaitwayAgentOptions = {
 };
 
 export type CreateCredentialInput = { sellerId: string; maxMicros: string; ttlSeconds?: number };
+
+export type CreateMandateInput = { sellerId: string; maxPerPeriodMicros: string; period: Mandate["period"] };
+
+export type TransferInput = { sellerId: string; amountMicros: string; reference?: string; idempotencyKey?: string };
 
 export type AgentFetchOptions = {
   /** Size of the credential to open if this call has to pay, instead of `sessionMicros`. */
@@ -95,6 +99,48 @@ export class GaitwayAgent {
         r.status === "rejected" && !(r.reason instanceof GaitwayError && ALREADY_FINISHED.has(r.reason.code)),
     );
     if (failed) throw failed.reason;
+  }
+
+  /**
+   * Create a standing mandate with a seller: the seller may charge up to `maxPerPeriodMicros`
+   * per period without a credential. The returned mandate carries `token`, which the agent
+   * presents in the `gaitway-mandate` header.
+   */
+  async createMandate(input: CreateMandateInput): Promise<Mandate> {
+    const { mandate } = await this.http.post<{ mandate: Mandate }>("/v1/mandates", {
+      sellerId: input.sellerId, maxPerPeriodMicros: input.maxPerPeriodMicros, period: input.period,
+    });
+    return mandate;
+  }
+
+  /**
+   * Pay a seller directly (a push payment, no credential). Returns the resulting charge,
+   * whose `description` is `reference`. Without `idempotencyKey` a fresh one is generated per call.
+   */
+  async transfer(input: TransferInput): Promise<Charge> {
+    const body: Record<string, unknown> = { sellerId: input.sellerId, amountMicros: input.amountMicros };
+    if (input.reference !== undefined) body.reference = input.reference;
+    const idempotencyKey = input.idempotencyKey || randomUUID();
+    const { charge } = await this.http.post<{ charge: Charge }>("/v1/transfers", body, { "idempotency-key": idempotencyKey });
+    return charge;
+  }
+
+  /** Sellers in the public directory, optionally filtered by `query`. Reads every page. */
+  async findSellers(query?: string): Promise<Seller[]> {
+    const out: Seller[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: Page<Seller> = await this.http.get<Page<Seller>>("/v1/sellers", {
+        query: query || undefined, limit: 200, cursor: cursor ?? undefined,
+      });
+      out.push(...page.data);
+      cursor = page.nextCursor;
+    } while (cursor);
+    return out;
+  }
+
+  async getSeller(id: string): Promise<Seller> {
+    return (await this.http.get<{ seller: Seller }>(`/v1/sellers/${encodeURIComponent(id)}`)).seller;
   }
 
   /** All of this agent's payments, newest first. */
