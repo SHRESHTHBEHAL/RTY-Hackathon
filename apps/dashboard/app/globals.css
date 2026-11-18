@@ -1,0 +1,353 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Fare Gate tokens (DESIGN.md). Components use these, never raw hex.  */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --paper: #eef2ea;
+  --card: #fbfcf8;
+  --ink: #0b1f24;
+  --ink-soft: #4a5f63;
+  --line: rgba(11, 31, 36, 0.14);
+  --line-strong: rgba(11, 31, 36, 0.28);
+  --pass: #2f4bff;
+  --go: #12a66a;
+  --go-bright: #3ddc97;
+  --stop: #e8452a;
+  --hold: #b97800;
+  --hold-bright: #ffb020;
+
+  /* Text-safe variants for small text on paper (4.5:1). The base colours
+     above are for icons, fills, bars and large display text. */
+  --go-text: #0b7a4c;
+  --stop-text: #b8321b;
+  --hold-text: #8a5a00;
+  --pass-hover: #1f38e0;
+
+  /* Ink surface */
+  --on-ink: #eef2ea;
+  --on-ink-soft: #9db2b0;
+  --ink-raised: #12303a;
+  --ink-line: rgba(238, 242, 234, 0.14);
+  --pass-bright: #8b9cff; /* links and focus on ink */
+  --stop-bright: #ff8a73; /* error text on ink */
+
+  --shadow-pop: 0 12px 32px -12px rgba(11, 31, 36, 0.28);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-quick: 120ms;
+  --dur-standard: 200ms;
+  --dur-slow: 320ms;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-raised: var(--ink-raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-pass: var(--pass);
+  --color-pass-hover: var(--pass-hover);
+  --color-pass-bright: var(--pass-bright);
+  --color-go: var(--go);
+  --color-go-text: var(--go-text);
+  --color-go-bright: var(--go-bright);
+  --color-stop: var(--stop);
+  --color-stop-text: var(--stop-text);
+  --color-hold: var(--hold);
+  --color-hold-text: var(--hold-text);
+  --color-hold-bright: var(--hold-bright);
+  --color-stop-bright: var(--stop-bright);
+  --color-on-ink: var(--on-ink);
+  --color-on-ink-soft: var(--on-ink-soft);
+  --color-ink-line: var(--ink-line);
+
+  --font-display: var(--font-big-shoulders), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Type scale: 12 14 16 18 24 32 48 72 112 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 3rem;
+  --text-4xl: 4.5rem;
+  --text-5xl: 7rem;
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  --shadow-pop: var(--shadow-pop);
+
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+
+  --breakpoint-nav: 900px;
+
+  --animate-guilloche: guilloche-drift 120s linear infinite;
+}
+
+/* Hover effects only where hovering is real. */
+@custom-variant hover-fine {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+@custom-variant group-hover-fine {
+  @media (hover: hover) and (pointer: fine) {
+    :where(.group):hover & {
+      @slot;
+    }
+  }
+}
+
+@keyframes punch-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes skeleton-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes lane-drift {
+  from {
+    transform: translateX(-26px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes guilloche-drift {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--pass) 22%, transparent);
+  }
+  /* One focus ring everywhere: 2px pass, 2px offset. */
+  :focus-visible {
+    outline: 2px solid var(--pass);
+    outline-offset: 2px;
+  }
+  .surface-ink :focus-visible {
+    outline-color: var(--pass-bright);
+  }
+  button,
+  [role="button"],
+  a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Utilities used across components                                    */
+/* ------------------------------------------------------------------ */
+
+@utility font-display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  font-weight: 800;
+}
+
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Every pressable element: scale to 0.97 on press, 120ms. */
+@utility pressable {
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: var(--dur-quick);
+  transition-timing-function: var(--ease-out);
+  &:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(0.97);
+  }
+}
+
+@utility surface-ink {
+  background-color: var(--ink);
+  color: var(--on-ink);
+}
+
+/* Paper grain: a faint engraved dot field, cheaper than an image. */
+@utility paper-grain {
+  background-image: radial-gradient(rgba(11, 31, 36, 0.045) 0.6px, transparent 0.7px);
+  background-size: 6px 6px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ticket shape: two notches cut from the left and right edges where   */
+/* the body meets the stub, a 1px hairline that follows the cut, and a */
+/* dashed perforation between the notches. Pure CSS masks, SSR-safe.   */
+/* ------------------------------------------------------------------ */
+
+@layer components {
+.ticket {
+  --notch: 11px;
+  --ticket-r: 14px;
+  --ticket-bg: var(--card);
+  --ticket-line: var(--line-strong);
+  --ticket-perf: var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+}
+.ticket[data-tone="ink"] {
+  --ticket-bg: var(--ink-raised);
+  --ticket-line: var(--ink-line);
+  --ticket-perf: rgba(238, 242, 234, 0.22);
+  color: var(--on-ink);
+}
+.ticket[data-tone="pass"] {
+  --ticket-bg: var(--pass);
+  --ticket-line: rgba(11, 31, 36, 0.3);
+  --ticket-perf: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+.ticket-head,
+.ticket-stub {
+  position: relative;
+  background: var(--ticket-line);
+}
+.ticket-head {
+  padding: 1px 1px 0;
+  border-radius: var(--ticket-r) var(--ticket-r) 0 0;
+  -webkit-mask:
+    radial-gradient(circle at 0 100%, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 100%, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 100%, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 100%, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) right / 51% 100% no-repeat;
+}
+.ticket-stub {
+  padding: 0 1px 1px;
+  border-radius: 0 0 var(--ticket-r) var(--ticket-r);
+  -webkit-mask:
+    radial-gradient(circle at 0 0, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 0, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 0, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 0, #0000 calc(var(--notch) - 0.5px), #000 var(--notch)) right / 51% 100% no-repeat;
+}
+.ticket-fill {
+  position: relative;
+  height: 100%;
+  background: var(--ticket-bg);
+  overflow: hidden;
+}
+.ticket-head > .ticket-fill {
+  border-radius: calc(var(--ticket-r) - 1px) calc(var(--ticket-r) - 1px) 0 0;
+  -webkit-mask:
+    radial-gradient(circle at -1px 100%, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) left / 51% 100% no-repeat,
+    radial-gradient(circle at calc(100% + 1px) 100%, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at -1px 100%, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) left / 51% 100% no-repeat,
+    radial-gradient(circle at calc(100% + 1px) 100%, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) right / 51% 100% no-repeat;
+}
+.ticket-stub > .ticket-fill {
+  border-radius: 0 0 calc(var(--ticket-r) - 1px) calc(var(--ticket-r) - 1px);
+  -webkit-mask:
+    radial-gradient(circle at -1px 0, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) left / 51% 100% no-repeat,
+    radial-gradient(circle at calc(100% + 1px) 0, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at -1px 0, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) left / 51% 100% no-repeat,
+    radial-gradient(circle at calc(100% + 1px) 0, #0000 calc(var(--notch) - 1.5px), #000 calc(var(--notch) - 1px)) right / 51% 100% no-repeat;
+}
+/* Perforation: dashes between the notches. */
+.ticket-stub > .ticket-fill::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--notch) + 6px);
+  right: calc(var(--notch) + 6px);
+  height: 1px;
+  background: repeating-linear-gradient(to right, var(--ticket-perf) 0 6px, transparent 6px 11px);
+}
+.ticket[data-interactive="true"] .ticket-head,
+.ticket[data-interactive="true"] .ticket-stub {
+  transition: background-color var(--dur-quick) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ticket[data-interactive="true"]:hover {
+    --ticket-line: var(--ink);
+  }
+  .ticket[data-interactive="true"][data-tone="ink"]:hover {
+    --ticket-line: var(--on-ink-soft);
+  }
+}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+  .animate-guilloche {
+    animation: none !important;
+  }
+}
