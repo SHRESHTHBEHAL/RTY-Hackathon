@@ -1,26 +1,16 @@
-# Dependencies
 node_modules/
-.venv/
-venv/
-__pycache__/
-*.pyc
-
-# Build output
 dist/
 build/
 .next/
 out/
-target/
 coverage/
-
-# Environment & secrets: never commit API keys
+*.log
 .env
 .env.*
 !.env.example
-
-# OS / editor
+pnpm-lock.yaml
+package-lock.json
+contracts/out/
+contracts/cache/
+contracts/broadcast/
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/*
-!.vscode/extensions.json
