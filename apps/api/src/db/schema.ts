@@ -150,4 +150,62 @@ export const SCHEMA: string[] = [
     created_at timestamptz not null default now()
   )`,
   `create index if not exists credentials_active_idx on credentials (expires_at) where status = 'active'`,
+
+  // --- Charges and idempotency (Task 7) ---
+  `create table if not exists charges (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    credential_id text,
+    mandate_id text,
+    seller_id text not null,
+    agent_id text not null,
+    business_id text not null,
+    wallet_id text not null,
+    amount_micros bigint not null check (amount_micros > 0),
+    fee_micros bigint not null check (fee_micros >= 0 and fee_micros <= amount_micros),
+    refunded_micros bigint not null default 0,
+    description text,
+    batch_id text,
+    settled_at timestamptz,
+    created_at timestamptz not null default now()
+  )`,
+  `create index if not exists charges_seller_idx on charges (env, seller_id, seq desc)`,
+  `create index if not exists charges_agent_idx on charges (env, agent_id, seq desc)`,
+  `create index if not exists charges_unsettled_idx on charges (env, seq) where batch_id is null`,
+  `create table if not exists idempotency_keys (
+    scope text not null,
+    key text not null,
+    request_hash text not null,
+    status_code integer,
+    response_body text,
+    created_at timestamptz not null default now(),
+    primary key (scope, key)
+  )`,
+  `create table if not exists payouts (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    seller_id text not null,
+    batch_id text not null,
+    amount_micros bigint not null,
+    status text not null check (status in ('pending','sent')),
+    tx_hash text,
+    created_at timestamptz not null default now(),
+    unique (batch_id, seller_id)
+  )`,
+
+  // --- Seller services (Task 8) ---
+  `create table if not exists services (
+    id text primary key,
+    seq bigserial not null,
+    env text not null,
+    seller_id text not null,
+    name text not null,
+    description text not null,
+    price_note text not null,
+    url text not null,
+    active boolean not null default true,
+    created_at timestamptz not null default now()
+  )`,
 ];
