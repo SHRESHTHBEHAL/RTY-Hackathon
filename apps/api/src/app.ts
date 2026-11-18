@@ -19,6 +19,8 @@ import { registerRefundRoutes } from "./routes/refunds.js";
 import { registerWithdrawalRoutes } from "./routes/withdrawals.js";
 import { registerDirectoryRoutes } from "./routes/directory.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
+import { registerPolicyHookRoutes } from "./routes/policy-hook.js";
+import { checkPolicyHook } from "./rules/hook.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -26,6 +28,7 @@ export type App = Hono<AppEnv>;
 export function buildApp(deps: Deps): App {
   const app: App = new Hono<AppEnv>();
   const log = logOf(deps);
+  deps.policyHook ??= (env, businessId, event) => checkPolicyHook(deps, env, businessId, event);
 
   app.onError((err, c) => {
     if (err instanceof ApiError) {
@@ -63,6 +66,7 @@ export function buildApp(deps: Deps): App {
   registerWithdrawalRoutes(app, deps);
   registerDirectoryRoutes(app, deps);
   registerWebhookRoutes(app, deps);
+  registerPolicyHookRoutes(app, deps);
 
   return app;
 }

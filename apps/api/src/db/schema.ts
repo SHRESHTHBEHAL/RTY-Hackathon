@@ -274,6 +274,15 @@ export const SCHEMA: string[] = [
     created_at timestamptz not null default now()
   )`,
 
+  // --- Policy hook (Task 16) ---
+  `create table if not exists policy_hooks (
+    business_id text primary key,
+    env text not null,
+    url text not null,
+    secret text not null,
+    updated_at timestamptz not null default now()
+  )`,
+
   // --- Webhooks (Task 15) ---
   `create table if not exists webhook_endpoints (
     seller_id text primary key,
