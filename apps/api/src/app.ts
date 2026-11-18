@@ -3,6 +3,9 @@ import type { Deps } from "./deps.js";
 import { logOf } from "./deps.js";
 import { ApiError } from "./errors.js";
 import type { Principal } from "./auth/principal.js";
+import { registerAccountRoutes } from "./routes/accounts.js";
+import { registerKeyRoutes } from "./routes/keys.js";
+import { registerAgentRoutes } from "./routes/agents.js";
 
 export type AppEnv = { Variables: { principal: Principal } };
 export type App = Hono<AppEnv>;
@@ -30,6 +33,10 @@ export function buildApp(deps: Deps): App {
   });
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  registerAccountRoutes(app, deps);
+  registerKeyRoutes(app, deps);
+  registerAgentRoutes(app, deps);
 
   return app;
 }
