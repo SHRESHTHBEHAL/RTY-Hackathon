@@ -15,7 +15,17 @@ export type Hooks = {
   beforeVaultSettle?: (batchId: string) => void | Promise<void>;
 };
 
+export type PolicyEvent = {
+  type: "credential" | "mandate" | "transfer";
+  agentId: string;
+  walletId: string;
+  sellerId: string;
+  amountMicros: bigint;
+};
+
 export type Deps = {
+  /** Calls the business's policy hook, if any (Task 16). Throws rule_violation unless it allows. */
+  policyHook?: (env: "test" | "live", businessId: string, event: PolicyEvent) => Promise<void>;
   sql: Db;
   config: Config;
   vault: VaultClient;

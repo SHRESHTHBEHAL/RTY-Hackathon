@@ -218,6 +218,17 @@ export const SCHEMA: string[] = [
     primary key (batch_id, business_id, seller_id)
   )`,
 
+  // --- Spending rules (Task 11) ---
+  `create table if not exists agent_rules (
+    agent_id text primary key,
+    env text not null,
+    per_payment_max bigint,
+    daily_max bigint,
+    allowed_seller_ids text[],
+    updated_at timestamptz not null default now()
+  )`,
+  `create index if not exists charges_agent_day_idx on charges (agent_id, created_at)`,
+
   // --- Seller services (Task 8) ---
   `create table if not exists services (
     id text primary key,

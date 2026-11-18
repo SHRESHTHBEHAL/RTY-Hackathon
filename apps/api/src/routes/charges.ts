@@ -7,6 +7,7 @@ import { newId } from "../ids.js";
 import { zMicros } from "../money.js";
 import { requireAuth } from "../auth/middleware.js";
 import { withIdempotency } from "../idempotency.js";
+import { checkRules } from "../rules/check.js";
 import { balanceOf, post } from "../ledger/ledger.js";
 import { acct } from "../ledger/accounts.js";
 import { closeCredential, lockCredential, type CredentialRow } from "../credentials/service.js";
@@ -67,6 +68,7 @@ export function registerChargeRoutes(app: App, deps: Deps) {
       if (amount > cr.remaining_micros) {
         throw new ApiError("amount_exceeds_remaining", undefined, { remainingMicros: cr.remaining_micros.toString() });
       }
+      await checkRules(tx, { agentId: cr.agent_id, sellerId: cr.seller_id, amountMicros: amount, at: "charge", now });
       const fee = feeFor(amount, deps.config.platformFeeBps);
       const id = newId("chg");
       await post(

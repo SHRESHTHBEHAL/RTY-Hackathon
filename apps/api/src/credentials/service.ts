@@ -7,6 +7,7 @@ import { newId } from "../ids.js";
 import { post } from "../ledger/ledger.js";
 import { acct } from "../ledger/accounts.js";
 import { signToken } from "./signer.js";
+import { checkRules } from "../rules/check.js";
 
 export type CredentialRow = {
   id: string;
@@ -54,6 +55,14 @@ export async function createCredential(
   const [biz] = await sql<{ id: string; name: string; verified: boolean; email: string }[]>`
     select b.id, b.name, b.verified, a.email from businesses b join accounts a on a.id = b.account_id where b.id = ${agent.businessId}`;
   if (!biz) throw new ApiError("not_found");
+  await checkRules(sql, { agentId: agent.agentId, sellerId: input.sellerId, amountMicros: input.maxMicros, at: "authorise", now: deps.now() });
+  await deps.policyHook?.(agent.env, agent.businessId, {
+    type: "credential",
+    agentId: agent.agentId,
+    walletId: agent.walletId,
+    sellerId: input.sellerId,
+    amountMicros: input.maxMicros,
+  });
 
   const iat = Math.floor(deps.now().getTime() / 1000);
   const exp = iat + input.ttlSeconds;
