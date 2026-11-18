@@ -143,6 +143,9 @@ its wallet holds.
   seller asks). Includes a stand-in API used for tests and the demo.
 - `packages/mcp`: an MCP server that gives an agent a wallet as tools:
   check balance, find sellers, make a paid request, pay a seller.
+- `contracts` and `packages/chain`: the vault smart contract that holds
+  the money, with its tests and deploy script, and the client that drives
+  it. See `docs/handoff/ws1-notes.md`.
 - `apps/demo`: Relay, a sample paid messaging API, and an agent that pays
   it one cent per message.
 - `apps/dashboard`: the web app. Sign-up and log-in, a seller dashboard,
@@ -161,9 +164,10 @@ tools return.
 
 ### What is not built
 
-Balances live in a stand-in API in memory; no real money moves. The ledger
-backend and the on-chain vault described in `PLAN.md` and `context.md` are
-designed but not built. The dashboard runs on built-in sample data. The
+No real money moves. The ledger backend described in `PLAN.md` and
+`context.md` is designed but not built, so the SDK, demo, and MCP server
+run against a stand-in API that keeps balances in memory, and the vault is
+not yet wired to them. The dashboard runs on built-in sample data. The
 business screens, landing page, and live demo screen were still being
 finished at code freeze.
 
